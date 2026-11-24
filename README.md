@@ -13,6 +13,9 @@ Agencia de viajes online (trabajo práctico de Desarrollo de Software). Los prec
 | Historia | Pantalla | API |
 | -------- | -------- | --- |
 | UC1 · Registrar cuenta | `/registro` | `POST /api/auth/register/` |
+| UC2 · Iniciar sesión | `/ingresar` | `POST /api/auth/login/` |
+
+Cada administrador pertenece a un área (**Administración General**, **Catálogo y Precios** u **Operador de Reservas**) y solo accede a las funciones de su área, en el panel y en la API.
 
 ## Cómo levantarlo
 
@@ -27,6 +30,7 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env            # completar DJANGO_SECRET_KEY y DATABASE_URL
 python manage.py migrate
+python manage.py cargar_usuarios  # un administrador por área y un cliente
 python manage.py runserver
 ```
 
@@ -41,6 +45,17 @@ npm run dev
 ```
 
 Abrir http://localhost:5173. Vite redirige `/api` al backend en el puerto 8000.
+
+## Usuarios de prueba
+
+Contraseña de todos: `Destinos2026!`
+
+| Correo                  | Rol                    |
+| ----------------------- | ---------------------- |
+| `admin@destinos.com`    | Administración General |
+| `catalogo@destinos.com` | Catálogo y Precios     |
+| `reservas@destinos.com` | Operador de Reservas   |
+| `cliente@destinos.com`  | Cliente                |
 
 ## Comandos útiles
 
@@ -58,7 +73,7 @@ El código está escrito en español: clases, funciones, variables, componentes,
 - **Lo que exige Django, DRF o React**: `Meta`, `fields`, `get_queryset`, `validate`, `create_user`, `className`, `children`, etc.
 - **Campos de la base y de la API**: `email`, `first_name`, `last_name`, `role`, `admin_area`, `is_active`, `password`.
 - **Valores guardados**: `client`, `admin`, `general`, `catalog`, `reservations` (en el código se usan con nombres en español, por ejemplo `Rol.CLIENTE` o `AreaAdmin.CATALOGO`).
-- **Rutas de la API**: `/api/auth/register/`.
+- **Rutas de la API**: `/api/auth/register/`, `/api/auth/login/`, etc.
 - **La app de Django `accounts` y el modelo `User`**: renombrarlos cambia los nombres de las tablas.
 
 ## Estructura
@@ -68,8 +83,10 @@ Cada historia vive en sus propios archivos, así cada cambio queda asociado a su
 ```
 backend/
   config/                  settings y rutas
-  accounts/api/registro.py UC1
+  accounts/api/registro.py       UC1
+  accounts/api/sesion.py         UC2 (ingreso, usuario actual) · accounts/permisos.py (áreas)
 frontend/src/
   app/ components/ lib/ paginas/  base compartida
   features/registro/              UC1
+  features/sesion/                UC2 (ingreso, panel por área)
 ```

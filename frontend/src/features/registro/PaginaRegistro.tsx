@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { Boton } from '@/components/ui/Boton'
@@ -24,9 +24,9 @@ export function PaginaRegistro() {
 
   const mutacion = useMutation({
     mutationFn: (datos: DatosRegistro) => api('/auth/register/', { metodo: 'POST', cuerpo: datos }),
-    onSuccess: () => {
+    onSuccess: (_, { email }) => {
       toast.success('Usuario registrado con éxito')
-      navegar('/', { replace: true })
+      navegar('/ingresar', { state: { email } })
     },
   })
   const errores = erroresDeCampos(mutacion.error)
@@ -35,7 +35,14 @@ export function PaginaRegistro() {
     <EstructuraAcceso
       titulo="Creá tu cuenta"
       pasajero={`${pasajero.nombre} ${pasajero.apellido}`.trim()}
-      subtitulo="Con tu cuenta podés reservar, pagar y publicar reseñas."
+      subtitulo={
+        <>
+          Con tu cuenta podés reservar, pagar y publicar reseñas. ¿Ya tenés una?{' '}
+          <Link to="/ingresar" className="font-semibold text-route-600 hover:underline">
+            Iniciá sesión
+          </Link>
+        </>
+      }
     >
       <form
         noValidate

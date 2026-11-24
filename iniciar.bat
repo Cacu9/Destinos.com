@@ -22,8 +22,9 @@ if not exist backend\.env (
 rem Las migraciones se corren desde backend, igual que el servidor, para usar la misma base.
 pushd backend
 .venv\Scripts\python manage.py migrate -v 0 || goto :error
-popd
 rem Datos de demostracion (no se duplican si ya existen).
+.venv\Scripts\python manage.py cargar_usuarios >nul || goto :error
+popd
 
 if not exist frontend\node_modules (
   echo Instalando el frontend por primera vez...
