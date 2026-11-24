@@ -4,9 +4,10 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { Toaster } from 'sonner'
 
 import { EstructuraPublica } from '@/components/estructura/EstructuraPublica'
+import { PaginaCuentas } from '@/features/cuentas-admin/PaginaCuentas'
 import { PaginaRegistro } from '@/features/registro/PaginaRegistro'
 import { EstructuraPanel } from '@/features/sesion/EstructuraPanel'
-import { InicioPanel, RequiereAdmin } from '@/features/sesion/guardas'
+import { InicioPanel, RequiereAdmin, RequiereArea } from '@/features/sesion/guardas'
 import { PaginaIngreso } from '@/features/sesion/PaginaIngreso'
 import { ProveedorAutenticacion } from '@/features/sesion/ProveedorAutenticacion'
 import { PaginaInicio } from '@/paginas/PaginaInicio'
@@ -44,6 +45,14 @@ export function Aplicacion() {
               }
             >
               <Route index element={<InicioPanel />} />
+              <Route
+                path="cuentas"
+                element={
+                  <RequiereArea area="general">
+                    <PaginaCuentas />
+                  </RequiereArea>
+                }
+              />
             </Route>
           </Routes>
         </BrowserRouter>

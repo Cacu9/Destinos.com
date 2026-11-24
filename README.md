@@ -15,6 +15,7 @@ Agencia de viajes online (trabajo práctico de Desarrollo de Software). Los prec
 | UC1 · Registrar cuenta | `/registro` | `POST /api/auth/register/` |
 | UC2 · Iniciar sesión | `/ingresar` | `POST /api/auth/login/` |
 | UC3 · Cerrar sesión | Menú del sitio y del panel | `POST /api/auth/logout/` |
+| UC24 · Gestionar cuentas de administrador | `/admin/cuentas` | `/api/admin/accounts/` |
 
 Cada administrador pertenece a un área (**Administración General**, **Catálogo y Precios** u **Operador de Reservas**) y solo accede a las funciones de su área, en el panel y en la API.
 
@@ -74,7 +75,7 @@ El código está escrito en español: clases, funciones, variables, componentes,
 - **Lo que exige Django, DRF o React**: `Meta`, `fields`, `get_queryset`, `validate`, `create_user`, `className`, `children`, etc.
 - **Campos de la base y de la API**: `email`, `first_name`, `last_name`, `role`, `admin_area`, `is_active`, `password`.
 - **Valores guardados**: `client`, `admin`, `general`, `catalog`, `reservations` (en el código se usan con nombres en español, por ejemplo `Rol.CLIENTE` o `AreaAdmin.CATALOGO`).
-- **Rutas de la API**: `/api/auth/register/`, `/api/auth/login/`, `/api/auth/logout/`, etc.
+- **Rutas de la API**: `/api/auth/register/`, `/api/auth/login/`, `/api/auth/logout/`, `/api/admin/accounts/`, etc.
 - **La app de Django `accounts` y el modelo `User`**: renombrarlos cambia los nombres de las tablas.
 
 ## Estructura
@@ -87,8 +88,10 @@ backend/
   accounts/api/registro.py       UC1
   accounts/api/sesion.py         UC2 (ingreso, usuario actual) · accounts/permisos.py (áreas)
   accounts/api/cierre_sesion.py  UC3
+  accounts/api/cuentas_admin.py  UC24
 frontend/src/
   app/ components/ lib/ paginas/  base compartida
   features/registro/              UC1
   features/sesion/                UC2 y UC3 (ingreso, cierre de sesión, panel por área)
+  features/cuentas-admin/         UC24
 ```
