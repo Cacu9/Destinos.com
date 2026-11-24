@@ -1,0 +1,148 @@
+@import '@fontsource-variable/archivo/wdth.css';
+@import 'tailwindcss';
+
+/*
+ * Destinos.com: el mundo de un atlas de rutas. Papel de mapa y zonas de agua, rojo de ruta nacional para las acciones,
+ * azul de escudo de ruta para la información y el pase de abordar como forma de cada vuelo.
+ */
+@theme {
+  --font-sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+
+  --color-paper: #f4f3ec;
+  --color-sheet: #fcfbf7;
+
+  --color-ink-950: #121a17;
+  --color-ink-900: #1c2723;
+  --color-ink-700: #34423d;
+  --color-ink-500: #57645f;
+  --color-ink-300: #98a29d;
+  --color-ink-200: #c8cec8;
+  --color-ink-100: #e2e5df;
+
+  --color-water-100: #d8e9ed;
+  --color-water-200: #c7dee4;
+  --color-water-400: #8db9c5;
+  --color-water-700: #2f6878;
+
+  --color-land: #eee6d2;
+  --color-land-edge: #c3b181;
+  --color-home: #ccdcab;
+  --color-home-edge: #7f9a52;
+
+  --color-route-500: #d0392a;
+  --color-route-600: #ad2c1f;
+  --color-route-50: #fbece8;
+
+  --color-shield-700: #1d4a85;
+  --color-shield-600: #2459a0;
+  --color-shield-50: #e8eef7;
+
+  --color-fare-flexible: #2e7a4d;
+  --color-fare-flexible-50: #e7f1e9;
+  --color-fare-standard: #8f5a0c;
+  --color-fare-standard-50: #f6eedd;
+  --color-fare-promotional: #b3321f;
+  --color-fare-promotional-50: #fbece8;
+
+  --shadow-sheet: 0 1px 2px rgb(28 39 35 / 0.06), 0 10px 28px -14px rgb(28 39 35 / 0.22);
+  --shadow-float: 0 18px 48px -18px rgb(18 26 23 / 0.4);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink-900 antialiased;
+    caret-color: var(--color-route-500);
+    accent-color: var(--color-route-500);
+  }
+
+  ::selection {
+    background: var(--color-shield-600);
+    color: var(--color-sheet);
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-extrabold tracking-[-0.02em] text-balance;
+    font-stretch: 112%;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+  }
+
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-shield-600;
+  }
+}
+
+/* El ancho de la tipografía como voz: condensada para etiquetas chicas, expandida para códigos de aeropuerto. */
+@utility font-condensed {
+  font-stretch: 75%;
+}
+
+@utility font-expanded {
+  font-stretch: 125%;
+}
+
+/* Etiquetas chicas, como las impresas en leyendas de mapas, pasajes y encabezados de tablas. */
+@utility map-label {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-stretch: 75%;
+}
+
+/* La línea doble fina que enmarca la leyenda de un mapa impreso. */
+@utility legend-frame {
+  border: 1px solid var(--color-ink-900);
+  outline: 1px solid var(--color-ink-900);
+  outline-offset: 3px;
+}
+
+@keyframes draw-route {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* La única animación propia del catálogo: la ruta elegida se dibuja sola. Los trazos necesitan pathLength="1". */
+@keyframes route-mark-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Las flechas y los números de tramo aparecen cuando su ruta ya se dibujó. */
+@utility animate-route-mark {
+  animation: route-mark-in 0.3s ease-out 0.6s both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility animate-draw-route {
+  stroke-dasharray: 1;
+  animation: draw-route 0.9s var(--ease-out-expo) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}

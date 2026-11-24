@@ -1,0 +1,75 @@
+# Destinos.com
+
+Agencia de viajes online (trabajo práctico de Desarrollo de Software). Los precios, vuelos y pagos son de demostración.
+
+| Capa          | Tecnología                                         |
+| ------------- | -------------------------------------------------- |
+| Backend       | Django 5 + Django REST Framework + JWT (SimpleJWT) |
+| Base de datos | PostgreSQL (SQLite opcional para desarrollo)       |
+| Frontend      | React 19 + TypeScript + Vite + Tailwind CSS 4      |
+
+## Historias del sprint
+
+| Historia | Pantalla | API |
+| -------- | -------- | --- |
+| UC1 · Registrar cuenta | `/registro` | `POST /api/auth/register/` |
+
+## Cómo levantarlo
+
+Requisitos: Python 3.12+, Node 20+ y PostgreSQL (o SQLite para probar rápido).
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate            # Windows (en macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+copy .env.example .env            # completar DJANGO_SECRET_KEY y DATABASE_URL
+python manage.py migrate
+python manage.py runserver
+```
+
+Para PostgreSQL: crear la base (`createdb destinos`) y usar `DATABASE_URL=postgres://USUARIO:CONTRASEÑA@localhost:5432/destinos`. Sin PostgreSQL: `DATABASE_URL=sqlite:///db.sqlite3`.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Abrir http://localhost:5173. Vite redirige `/api` al backend en el puerto 8000.
+
+## Comandos útiles
+
+```bash
+cd backend && python manage.py test     # tests de la API
+cd frontend && npm run typecheck        # tipos
+cd frontend && npm run lint             # lint
+cd frontend && npm run build            # build de producción
+```
+
+## Idioma del código
+
+El código está escrito en español: clases, funciones, variables, componentes, archivos y comentarios. Algunos nombres quedan en inglés a propósito, porque cambiarlos modificaría la base de datos, la API o el funcionamiento del framework:
+
+- **Lo que exige Django, DRF o React**: `Meta`, `fields`, `get_queryset`, `validate`, `create_user`, `className`, `children`, etc.
+- **Campos de la base y de la API**: `email`, `first_name`, `last_name`, `role`, `admin_area`, `is_active`, `password`.
+- **Valores guardados**: `client`, `admin`, `general`, `catalog`, `reservations` (en el código se usan con nombres en español, por ejemplo `Rol.CLIENTE` o `AreaAdmin.CATALOGO`).
+- **Rutas de la API**: `/api/auth/register/`.
+- **La app de Django `accounts` y el modelo `User`**: renombrarlos cambia los nombres de las tablas.
+
+## Estructura
+
+Cada historia vive en sus propios archivos, así cada cambio queda asociado a su UC:
+
+```
+backend/
+  config/                  settings y rutas
+  accounts/api/registro.py UC1
+frontend/src/
+  app/ components/ lib/ paginas/  base compartida
+  features/registro/              UC1
+```
