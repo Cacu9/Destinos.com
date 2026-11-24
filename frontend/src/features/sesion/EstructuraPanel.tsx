@@ -1,4 +1,4 @@
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, LogOut } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router'
 
 import { Logo } from '@/components/estructura/Logo'
@@ -8,9 +8,11 @@ import { ETIQUETAS_AREA_ADMIN } from '@/lib/cuentas'
 
 import { seccionesPara } from './secciones'
 import { useAutenticacion } from './useAutenticacion'
+import { useCerrarSesion } from './useCerrarSesion'
 
 export function EstructuraPanel() {
   const { usuario } = useAutenticacion()
+  const cerrarSesion = useCerrarSesion()
   if (!usuario?.admin_area) return null
 
   return (
@@ -18,6 +20,14 @@ export function EstructuraPanel() {
       <aside className="flex flex-col gap-6 bg-ink-900 p-4 text-sheet lg:sticky lg:top-0 lg:h-dvh lg:p-5">
         <div className="flex items-center justify-between">
           <Logo sobreOscuro />
+          <button
+            type="button"
+            onClick={cerrarSesion}
+            className={estilosBoton('onDark', 'sm', 'px-2.5 lg:hidden')}
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="size-4" />
+          </button>
         </div>
 
         <div className="border-y border-sheet/15 py-3">
@@ -50,6 +60,9 @@ export function EstructuraPanel() {
           <Link to="/" className={estilosBoton('onDark', 'sm', 'justify-start')}>
             <ArrowUpRight className="size-4" /> Ver sitio
           </Link>
+          <button type="button" onClick={cerrarSesion} className={estilosBoton('onDark', 'sm', 'justify-start')}>
+            <LogOut className="size-4" /> Cerrar sesión
+          </button>
         </div>
       </aside>
 

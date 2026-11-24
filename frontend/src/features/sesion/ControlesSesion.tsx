@@ -1,13 +1,15 @@
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, LogOut } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { estilosBoton } from '@/components/ui/estilosBoton'
 
 import { useAutenticacion } from './useAutenticacion'
+import { useCerrarSesion } from './useCerrarSesion'
 
-/** Acciones del encabezado: ingresar y crear cuenta para visitantes; nombre y panel con sesión. */
+/** Acciones del encabezado: ingresar y crear cuenta para visitantes; nombre, panel y cerrar sesión con sesión. */
 export function ControlesSesion() {
   const { usuario } = useAutenticacion()
+  const cerrarSesion = useCerrarSesion()
 
   if (!usuario) {
     return (
@@ -32,6 +34,15 @@ export function ControlesSesion() {
       <span className="mx-2 text-sm font-semibold max-md:hidden">
         {usuario.first_name} {usuario.last_name}
       </span>
+      <button
+        type="button"
+        onClick={cerrarSesion}
+        className={estilosBoton('ghost', 'sm', 'px-2.5')}
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+      >
+        <LogOut className="size-4" />
+      </button>
     </div>
   )
 }

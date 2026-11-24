@@ -5,6 +5,7 @@ import type { Usuario } from '@/lib/cuentas'
 export interface ValorAutenticacion {
   usuario: Usuario | null
   ingresar: (email: string, password: string) => Promise<Usuario>
+  cerrarSesion: () => Promise<void>
 }
 
 export const ContextoAutenticacion = createContext<ValorAutenticacion | null>(null)
