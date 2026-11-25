@@ -16,10 +16,19 @@ export function RequiereAdmin({ children }: { children: ReactNode }) {
   return children
 }
 
-/** Mantiene a cada administrador dentro de las funciones de su propia área. */
-export function RequiereArea({ area, children }: { area: AreaAdmin; children: ReactNode }) {
+/** Mantiene a cada administrador dentro de las funciones permitidas para su área. */
+export function RequiereArea({
+  area,
+  areas,
+  children,
+}: {
+  area?: AreaAdmin
+  areas?: AreaAdmin[]
+  children: ReactNode
+}) {
   const { usuario } = useAutenticacion()
-  return usuario?.admin_area === area ? children : <Navigate to="/admin" replace />
+  const permitidas = areas ?? (area ? [area] : [])
+  return usuario?.admin_area && permitidas.includes(usuario.admin_area) ? children : <Navigate to="/admin" replace />
 }
 
 export function InicioPanel() {

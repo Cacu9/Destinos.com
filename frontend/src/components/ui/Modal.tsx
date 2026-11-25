@@ -5,11 +5,12 @@ interface PropsModal {
   abierto: boolean
   titulo: string
   descripcion?: string
+  ancho?: 'normal' | 'amplio'
   alCerrar: () => void
   children: ReactNode
 }
 
-export function Modal({ abierto, titulo, descripcion, alCerrar, children }: PropsModal) {
+export function Modal({ abierto, titulo, descripcion, ancho = 'normal', alCerrar, children }: PropsModal) {
   const refDialogo = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -24,7 +25,9 @@ export function Modal({ abierto, titulo, descripcion, alCerrar, children }: Prop
       ref={refDialogo}
       onClose={alCerrar}
       onClick={(evento) => evento.target === refDialogo.current && alCerrar()}
-      className="m-auto w-[min(34rem,calc(100vw-2rem))] rounded-xl bg-sheet p-0 text-ink-900 shadow-float backdrop:bg-ink-950/45"
+      className={`m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl bg-sheet p-0 text-ink-900 shadow-float backdrop:bg-ink-950/45 ${
+        ancho === 'amplio' ? 'w-[min(48rem,calc(100vw-2rem))]' : 'w-[min(34rem,calc(100vw-2rem))]'
+      }`}
     >
       {abierto && (
         <div className="p-6 sm:p-7">

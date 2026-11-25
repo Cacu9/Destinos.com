@@ -79,7 +79,7 @@ function renovarTokenAcceso(): Promise<boolean> {
 interface OpcionesPedido {
   metodo?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   cuerpo?: unknown
-  parametros?: Record<string, string | number | undefined>
+  parametros?: Record<string, string | number | boolean | undefined>
 }
 
 export async function api<T>(ruta: string, { metodo = 'GET', cuerpo, parametros }: OpcionesPedido = {}): Promise<T> {
