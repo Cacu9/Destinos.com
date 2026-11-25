@@ -1,0 +1,342 @@
+﻿from datetime import timedelta
+from decimal import Decimal
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from catalog.models import ClaseCabina, TarifaVuelo, Vuelo
+
+
+class Command(BaseCommand):
+    help = "Crea vuelos y tarifas por clase de demostración en ARS."
+
+    def handle(self, *args, **options):
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=7)
+        vuelos_demo = [
+            {
+                "flight_number": "AR1680",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "San Carlos de Bariloche",
+                "destination_code": "BRC",
+                "departure_at": base,
+                "arrival_at": base + timedelta(hours=2, minutes=25),
+                "stops": 0,
+                "base_price_ars": Decimal("185000.00"),
+                "cancellation_policy": "Cancelación sin cargo hasta 48 horas antes de la salida.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("185000.00"), 42, "Equipaje de mano 8 kg", False),
+                    (ClaseCabina.PREMIUM_ECONOMY, Decimal("265000.00"), 12, "Carry-on + 1 valija 23 kg", True),
+                ],
+            },
+            {
+                "flight_number": "FO5210",
+                "airline": "Flybondi",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "Mendoza",
+                "destination_code": "MDZ",
+                "departure_at": base + timedelta(days=1, hours=4),
+                "arrival_at": base + timedelta(days=1, hours=5, minutes=50),
+                "stops": 0,
+                "base_price_ars": Decimal("98000.00"),
+                "cancellation_policy": "Permite cambio con penalidad hasta 24 horas antes del vuelo.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("98000.00"), 60, "Mochila bajo el asiento", False),
+                ],
+            },
+            {
+                "flight_number": "LA4120",
+                "airline": "LATAM Airlines",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "Santiago de Chile",
+                "destination_code": "SCL",
+                "departure_at": base + timedelta(days=2, hours=2),
+                "arrival_at": base + timedelta(days=2, hours=4, minutes=15),
+                "stops": 0,
+                "base_price_ars": Decimal("240000.00"),
+                "cancellation_policy": "Reembolso completo en tarifa Ejecutiva hasta 24 horas antes.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("240000.00"), 35, "Equipaje de mano 10 kg", False),
+                    (ClaseCabina.BUSINESS, Decimal("520000.00"), 8, "2 valijas 23 kg + salón VIP", True),
+                ],
+            },
+            {
+                "flight_number": "AR1402",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Mendoza",
+                "destination_code": "MDZ",
+                "departure_at": base - timedelta(days=5, hours=2),
+                "arrival_at": base - timedelta(days=5) + timedelta(minutes=-5),
+                "stops": 0,
+                "base_price_ars": Decimal("112000.00"),
+                "cancellation_policy": "Cancelación sin cargo hasta 24 h antes en tarifa Ejecutiva.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("112000.00"), 30, "Equipaje de mano 8 kg", False),
+                    (ClaseCabina.BUSINESS, Decimal("340000.00"), 6, "Carry-on + 2 valijas 23 kg", True),
+                ],
+            },
+            {
+                "flight_number": "JA3061",
+                "airline": "JetSMART",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Mendoza",
+                "destination_code": "MDZ",
+                "departure_at": base - timedelta(days=5, hours=-4),
+                "arrival_at": base - timedelta(days=5, hours=-7, minutes=-50),
+                "stops": 1,
+                "base_price_ars": Decimal("81200.00"),
+                "cancellation_policy": "Cancelás con cargo del 30 % hasta 72 h antes.",
+                "notes": "Escala en Córdoba (COR).",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("81200.00"), 24, "Mochila bajo el asiento", False),
+                ],
+            },
+            {
+                "flight_number": "AR1523",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Córdoba",
+                "origin_code": "COR",
+                "destination_city": "Buenos Aires",
+                "destination_code": "AEP",
+                "departure_at": base - timedelta(days=4, hours=2),
+                "arrival_at": base - timedelta(days=4, hours=0, minutes=45),
+                "stops": 0,
+                "base_price_ars": Decimal("89900.00"),
+                "cancellation_policy": "Cancelación sin cargo hasta 24 h antes de la salida.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("89900.00"), 28, "Equipaje de mano 8 kg", True),
+                ],
+            },
+            {
+                "flight_number": "FO5402",
+                "airline": "Flybondi",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "San Carlos de Bariloche",
+                "destination_code": "BRC",
+                "departure_at": base - timedelta(days=3, hours=-2),
+                "arrival_at": base - timedelta(days=3, hours=-4, minutes=-25),
+                "stops": 0,
+                "base_price_ars": Decimal("96400.00"),
+                "cancellation_policy": "Sin reembolso. Solo cambio de fecha abonando diferencia.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("96400.00"), 18, "Mochila bajo el asiento", False),
+                ],
+            },
+            {
+                "flight_number": "JA3270",
+                "airline": "JetSMART",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "San Carlos de Bariloche",
+                "destination_code": "BRC",
+                "departure_at": base - timedelta(days=2, hours=-6),
+                "arrival_at": base - timedelta(days=2, hours=-10, minutes=-30),
+                "stops": 1,
+                "base_price_ars": Decimal("105900.00"),
+                "cancellation_policy": "Cancelás con cargo del 30 % hasta 72 h antes.",
+                "notes": "Escala en Mendoza (MDZ).",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("105900.00"), 22, "Equipaje de mano 10 kg", False),
+                ],
+            },
+            {
+                "flight_number": "AR1730",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Puerto Iguazú",
+                "destination_code": "IGR",
+                "departure_at": base - timedelta(days=3, hours=1),
+                "arrival_at": base - timedelta(days=3) + timedelta(minutes=50),
+                "stops": 0,
+                "base_price_ars": Decimal("119800.00"),
+                "cancellation_policy": "Cancelación sin cargo hasta 24 h antes de la salida.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("119800.00"), 32, "Equipaje de mano 8 kg", True),
+                    (ClaseCabina.PREMIUM_ECONOMY, Decimal("174000.00"), 10, "Carry-on + 1 valija 23 kg", True),
+                ],
+            },
+            {
+                "flight_number": "FO5733",
+                "airline": "Flybondi",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Puerto Iguazú",
+                "destination_code": "IGR",
+                "departure_at": base - timedelta(days=1, hours=-8),
+                "arrival_at": base - timedelta(days=1, hours=-9, minutes=-55),
+                "stops": 0,
+                "base_price_ars": Decimal("79900.00"),
+                "cancellation_policy": "Sin reembolso. Solo cambio de fecha abonando diferencia.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("79900.00"), 40, "Mochila bajo el asiento", False),
+                ],
+            },
+            {
+                "flight_number": "AR1880",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Ushuaia",
+                "destination_code": "USH",
+                "departure_at": base + timedelta(days=3, hours=-3),
+                "arrival_at": base + timedelta(days=3, minutes=35),
+                "stops": 0,
+                "base_price_ars": Decimal("189500.00"),
+                "cancellation_policy": "Reembolso completo en Económica Premium hasta 24 h antes.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("189500.00"), 26, "Equipaje de mano 8 kg", False),
+                    (ClaseCabina.PREMIUM_ECONOMY, Decimal("268000.00"), 9, "Carry-on + 1 valija 23 kg", True),
+                ],
+            },
+            {
+                "flight_number": "JA3402",
+                "airline": "JetSMART",
+                "origin_city": "Córdoba",
+                "origin_code": "COR",
+                "destination_city": "Salta",
+                "destination_code": "SLA",
+                "departure_at": base + timedelta(days=1, hours=1),
+                "arrival_at": base + timedelta(days=1, hours=2, minutes=35),
+                "stops": 0,
+                "base_price_ars": Decimal("62300.00"),
+                "cancellation_policy": "Sin reembolso. Permite cambio con penalidad.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("62300.00"), 45, "Mochila bajo el asiento", False),
+                ],
+            },
+            {
+                "flight_number": "AR1902",
+                "airline": "Aerolíneas Argentinas",
+                "origin_city": "Buenos Aires",
+                "origin_code": "AEP",
+                "destination_city": "Salta",
+                "destination_code": "SLA",
+                "departure_at": base + timedelta(days=4, hours=3),
+                "arrival_at": base + timedelta(days=4, hours=5, minutes=5),
+                "stops": 0,
+                "base_price_ars": Decimal("112400.00"),
+                "cancellation_policy": "Cancelás con cargo del 30 % hasta 72 h antes.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("112400.00"), 34, "Equipaje de mano 8 kg", False),
+                ],
+            },
+            {
+                "flight_number": "G37461",
+                "airline": "GOL",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "San Pablo",
+                "destination_code": "GRU",
+                "departure_at": base + timedelta(days=2, minutes=30),
+                "arrival_at": base + timedelta(days=2, hours=3, minutes=25),
+                "stops": 0,
+                "base_price_ars": Decimal("412000.00"),
+                "cancellation_policy": "Cancelás con cargo del 30 % hasta 72 h antes.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("412000.00"), 20, "Equipaje de mano 10 kg", False),
+                    (ClaseCabina.PREMIUM_ECONOMY, Decimal("590000.00"), 8, "Carry-on + 1 valija 23 kg", True),
+                ],
+            },
+            {
+                "flight_number": "LA8023",
+                "airline": "LATAM Airlines",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "San Pablo",
+                "destination_code": "GRU",
+                "departure_at": base + timedelta(days=2, hours=5),
+                "arrival_at": base + timedelta(days=2, hours=10, minutes=30),
+                "stops": 1,
+                "base_price_ars": Decimal("365500.00"),
+                "cancellation_policy": "Sin reembolso. Cambio de fecha con diferencia tarifaria.",
+                "notes": "Escala en Santiago de Chile (SCL).",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("365500.00"), 16, "Equipaje de mano 10 kg", False),
+                ],
+            },
+            {
+                "flight_number": "AA900",
+                "airline": "American Airlines",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "Miami",
+                "destination_code": "MIA",
+                "departure_at": base + timedelta(days=5, hours=13),
+                "arrival_at": base + timedelta(days=5, hours=22),
+                "stops": 0,
+                "base_price_ars": Decimal("1490000.00"),
+                "cancellation_policy": "Reembolso completo en Ejecutiva y Primera hasta 24 h antes.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("1490000.00"), 28, "Carry-on + 1 valija 23 kg", False),
+                    (ClaseCabina.BUSINESS, Decimal("4850000.00"), 6, "2 valijas 32 kg + salón VIP", True),
+                    (ClaseCabina.FIRST, Decimal("6950000.00"), 2, "3 valijas 32 kg + suite privada", True),
+                ],
+            },
+            {
+                "flight_number": "IB6856",
+                "airline": "Iberia",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "Madrid",
+                "destination_code": "MAD",
+                "departure_at": base + timedelta(days=6, hours=4),
+                "arrival_at": base + timedelta(days=6, hours=16, minutes=40),
+                "stops": 0,
+                "base_price_ars": Decimal("1720000.00"),
+                "cancellation_policy": "Cancelación sin cargo hasta 24 h antes en Premium y Ejecutiva.",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("1720000.00"), 30, "Carry-on + 1 valija 23 kg", False),
+                    (ClaseCabina.PREMIUM_ECONOMY, Decimal("2390000.00"), 10, "2 valijas 23 kg", True),
+                    (ClaseCabina.BUSINESS, Decimal("5600000.00"), 4, "2 valijas 32 kg + sala VIP", True),
+                ],
+            },
+            {
+                "flight_number": "LA8064",
+                "airline": "LATAM Airlines",
+                "origin_city": "Buenos Aires",
+                "origin_code": "EZE",
+                "destination_city": "Madrid",
+                "destination_code": "MAD",
+                "departure_at": base + timedelta(days=6, minutes=-40),
+                "arrival_at": base + timedelta(days=6, hours=17, minutes=30),
+                "stops": 1,
+                "base_price_ars": Decimal("1395000.00"),
+                "cancellation_policy": "Sin reembolso. Cambios habilitados abonando diferencia.",
+                "notes": "Escala en San Pablo (GRU).",
+                "tarifas": [
+                    (ClaseCabina.ECONOMY, Decimal("1395000.00"), 22, "Carry-on + 1 valija 23 kg", False),
+                ],
+            },
+        ]
+
+        for item in vuelos_demo:
+            tarifas = item.pop("tarifas")
+            vuelo, creado = Vuelo.objects.get_or_create(
+                flight_number=item["flight_number"],
+                departure_at=item["departure_at"],
+                defaults=item,
+            )
+            if creado:
+                TarifaVuelo.objects.bulk_create(
+                    [
+                        TarifaVuelo(
+                            flight=vuelo,
+                            cabin_class=clase,
+                            price_ars=precio,
+                            available_seats=asientos,
+                            baggage_included=equipaje,
+                            is_refundable=reembolsable,
+                        )
+                        for clase, precio, asientos, equipaje, reembolsable in tarifas
+                    ]
+                )
+
+        self.stdout.write(self.style.SUCCESS("Vuelos y tarifas de demostración listos."))
