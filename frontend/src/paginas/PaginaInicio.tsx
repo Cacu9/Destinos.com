@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Plane } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { estilosBoton } from '@/components/ui/estilosBoton'
@@ -14,9 +14,14 @@ export function PaginaInicio() {
             Vuelos, alojamientos y paquetes con sus condiciones de cancelación claras antes de pagar. Creá tu cuenta
             para reservar, pagar y publicar reseñas.
           </p>
-          <Link to="/registro" className={estilosBoton('primary', 'lg', 'mt-8')}>
-            Crear cuenta <ArrowRight className="size-4" />
-          </Link>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link to="/vuelos" className={estilosBoton('primary', 'lg')}>
+              <Plane className="size-4" /> Buscar vuelos
+            </Link>
+            <Link to="/registro" className={estilosBoton('secondary', 'lg')}>
+              Crear cuenta <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </div>
         <div className="hidden place-items-center rounded-xl bg-water-100 p-12 lg:grid">
           <PasePasajero pasajero="" />

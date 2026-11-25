@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { Toaster } from 'sonner'
 
 import { EstructuraPublica } from '@/components/estructura/EstructuraPublica'
+import { PaginaBusquedaVuelos } from '@/features/busqueda-vuelos/PaginaBusquedaVuelos'
 import { PaginaCuentas } from '@/features/cuentas-admin/PaginaCuentas'
 import { PaginaRegistro } from '@/features/registro/PaginaRegistro'
 import { EstructuraPanel } from '@/features/sesion/EstructuraPanel'
@@ -32,6 +33,7 @@ export function Aplicacion() {
           <Routes>
             <Route element={<EstructuraPublica />}>
               <Route index element={<PaginaInicio />} />
+              <Route path="vuelos" element={<PaginaBusquedaVuelos />} />
               <Route path="*" element={<PaginaNoEncontrada />} />
             </Route>
             <Route path="registro" element={<PaginaRegistro />} />
