@@ -7,6 +7,7 @@ import {
   type TarifaVuelo,
   type Vuelo,
 } from './tipos.ts'
+import { cantidadParaBuscar } from './utilidades.ts'
 import { AEROPUERTOS_DEMO } from './vuelosDemo.ts'
 
 export interface TarifaPublicaApi {
@@ -54,7 +55,7 @@ const AEROPUERTOS_POR_CODIGO = new Map(AEROPUERTOS_DEMO.map((aeropuerto) => [aer
 
 function aAeropuerto(codigo: string, ciudad: string): Aeropuerto {
   const conocido = AEROPUERTOS_POR_CODIGO.get(codigo)
-  if (conocido) return conocido
+  if (conocido) return { ...conocido, city: ciudad }
   return {
     code: codigo,
     name: ciudad,
@@ -78,7 +79,7 @@ function tipoTarifaSegunClase(clase: CategoriaVuelo): TarifaVuelo {
 export function adaptarVuelosApi(vuelosApi: VueloCatalogoApi[], filtros: FiltrosVuelos): Vuelo[] {
   if (filtros.flight_type && filtros.flight_type !== 'one_way') return []
 
-  const pasajerosMinimos = filtros.passengers ?? 1
+  const pasajerosMinimos = cantidadParaBuscar(filtros)
   const resultado: Vuelo[] = []
 
   for (const vueloApi of vuelosApi) {

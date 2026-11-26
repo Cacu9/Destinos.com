@@ -72,6 +72,8 @@ export type FiltrosVuelos = {
   category?: CategoriaVuelo
   date?: string
   passengers?: number
+  adults?: number
+  children?: number
 }
 
 export const MAXIMO_PASAJEROS = 9

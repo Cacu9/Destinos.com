@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Plane, UsersRound } from 'lucide-react'
+import { MapPin, Plane, UsersRound } from 'lucide-react'
 
 import type { AreaAdmin, Usuario } from '@/lib/cuentas'
 
@@ -13,6 +13,7 @@ export interface SeccionPanel {
 /** Secciones del panel; cada administrador ve solo las habilitadas para su área. */
 export const SECCIONES_PANEL: SeccionPanel[] = [
   { ruta: 'cuentas', etiqueta: 'Cuentas de administrador', icono: UsersRound, areas: ['general'] },
+  { ruta: 'destinos', etiqueta: 'Destinos', icono: MapPin, areas: ['catalog'] },
   { ruta: 'vuelos', etiqueta: 'Catálogo de vuelos', icono: Plane, areas: ['general', 'catalog'] },
 ]
 

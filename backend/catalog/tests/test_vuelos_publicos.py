@@ -124,3 +124,15 @@ class PruebasVuelosPublicos(APITestCase):
 
         respuesta = self.client.get(f"/api/flights/{self.vuelo_inactivo.pk}/")
         self.assertEqual(respuesta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cambios_de_destino_se_reflejan_en_vuelos_publicos(self):
+        from catalog.models import Destino
+
+        destino = Destino.objects.get(code="BRC")
+        destino.city = "San Carlos de Bariloche"
+        destino.save(update_fields=["city"])
+        encontrados = self.client.get("/api/flights/", {"destination": "San Carlos"}).data
+        self.assertEqual([vuelo["destination_city"] for vuelo in encontrados], ["San Carlos de Bariloche"])
+        destino.is_active = False
+        destino.save(update_fields=["is_active"])
+        self.assertEqual(self.client.get("/api/flights/", {"destination": "BRC"}).data, [])

@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import { EstructuraPublica } from '@/components/estructura/EstructuraPublica'
 import { PaginaBusquedaVuelos } from '@/features/busqueda-vuelos/PaginaBusquedaVuelos'
 import { PaginaCuentas } from '@/features/cuentas-admin/PaginaCuentas'
+import { PaginaDestinosAdmin } from '@/features/destinos-admin/PaginaDestinosAdmin'
 import { PaginaVuelosAdmin } from '@/features/vuelos-admin/PaginaVuelosAdmin'
 import { PaginaRegistro } from '@/features/registro/PaginaRegistro'
 import { EstructuraPanel } from '@/features/sesion/EstructuraPanel'
@@ -53,6 +54,14 @@ export function Aplicacion() {
                 element={
                   <RequiereArea area="general">
                     <PaginaCuentas />
+                  </RequiereArea>
+                }
+              />
+              <Route
+                path="destinos"
+                element={
+                  <RequiereArea area="catalog">
+                    <PaginaDestinosAdmin />
                   </RequiereArea>
                 }
               />

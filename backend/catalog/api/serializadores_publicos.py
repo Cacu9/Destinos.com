@@ -11,7 +11,15 @@ class SerializadorTarifaPublica(serializers.ModelSerializer):
 
     class Meta:
         model = TarifaVuelo
-        fields = ["id", "cabin_class", "cabin_class_display", "price_ars", "currency", "currency_display", "available_seats"]
+        fields = [
+            "id",
+            "cabin_class",
+            "cabin_class_display",
+            "price_ars",
+            "currency",
+            "currency_display",
+            "available_seats",
+        ]
         read_only_fields = fields
 
 
@@ -24,6 +32,8 @@ class SerializadorTarifaDetalle(SerializadorTarifaPublica):
 class SerializadorVueloCatalogo(serializers.ModelSerializer):
     """Vista resumida del catálogo público de vuelos y sus tarifas activas."""
 
+    origin_city = serializers.CharField(source="public_origin_city", read_only=True)
+    destination_city = serializers.CharField(source="public_destination_city", read_only=True)
     duration_minutes = serializers.IntegerField(read_only=True)
     min_price_ars = serializers.SerializerMethodField()
     currency_display = serializers.CharField(source="get_currency_display", read_only=True)

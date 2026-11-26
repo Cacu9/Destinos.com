@@ -128,3 +128,18 @@ class TarifaVuelo(models.Model):
 
     def __str__(self) -> str:
         return f"{self.flight.flight_number} · {self.get_cabin_class_display()} (${self.price_ars} {self.currency})"
+
+
+class Destino(models.Model):
+    city = models.CharField("ciudad", max_length=100)
+    region = models.CharField("provincia o estado", max_length=100)
+    country = models.CharField("país", max_length=100)
+    name = models.CharField("aeropuerto", max_length=120)
+    code = models.CharField("código IATA", max_length=3, unique=True)
+    is_active = models.BooleanField("activo", default=True)
+
+    class Meta:
+        ordering = ["city", "code"]
+
+    def __str__(self):
+        return f"{self.city} ({self.code})"
