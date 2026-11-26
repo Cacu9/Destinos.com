@@ -1,8 +1,12 @@
-const formatoMonedaArs = new Intl.NumberFormat('es-AR', {
-  style: 'currency',
-  currency: 'ARS',
-  maximumFractionDigits: 0,
-})
+import type { DivisaAdmin } from './consultas'
+
+const SIMBOLOS_DIVISA: Record<DivisaAdmin, string> = {
+  ARS: '$',
+  USD: 'US$',
+}
+
+const formatoEntero = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 })
+const formatoDecimal = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
   day: '2-digit',
@@ -12,10 +16,11 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
   minute: '2-digit',
 })
 
-export function formatearArs(valor: string | number): string {
+export function formatearPrecioDivisa(valor: string | number, divisa: DivisaAdmin = 'ARS'): string {
   const numero = Number(valor)
   if (!Number.isFinite(numero)) return String(valor)
-  return formatoMonedaArs.format(numero)
+  const texto = Number.isInteger(numero) ? formatoEntero.format(numero) : formatoDecimal.format(numero)
+  return `${SIMBOLOS_DIVISA[divisa]} ${texto}`
 }
 
 export function formatearFechaHoraCorta(iso: string): string {

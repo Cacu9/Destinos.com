@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -11,6 +11,11 @@ class ClaseCabina(models.TextChoices):
     PREMIUM_ECONOMY = "premium_economy", "Económica Premium"
     BUSINESS = "business", "Ejecutiva"
     FIRST = "first", "Primera Clase"
+
+
+class Divisa(models.TextChoices):
+    ARS = "ARS", "Pesos argentinos (ARS)"
+    USD = "USD", "Dólares estadounidenses (USD)"
 
 
 class VueloQuerySet(models.QuerySet):
@@ -26,7 +31,7 @@ class VueloQuerySet(models.QuerySet):
 
 
 class Vuelo(models.Model):
-    """Vuelo publicado en el catálogo con su precio base en pesos argentinos (ARS)."""
+    """Vuelo publicado en el catálogo con su precio base y divisa (ARS o USD)."""
 
     flight_number = models.CharField("número de vuelo", max_length=20)
     airline = models.CharField("aerolínea", max_length=100)
@@ -38,11 +43,12 @@ class Vuelo(models.Model):
     arrival_at = models.DateTimeField("fecha y hora de llegada")
     stops = models.PositiveSmallIntegerField("escalas", default=0)
     base_price_ars = models.DecimalField(
-        "precio base (ARS)",
+        "precio base",
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
+    currency = models.CharField("divisa", max_length=3, choices=Divisa.choices, default=Divisa.ARS)
     cancellation_policy = models.TextField("política de cancelación", blank=True)
     notes = models.TextField("observaciones", blank=True)
     is_active = models.BooleanField("activo", default=True)
@@ -85,16 +91,17 @@ class Vuelo(models.Model):
 
 
 class TarifaVuelo(models.Model):
-    """Tarifa por clase de cabina en pesos argentinos (ARS) para un vuelo."""
+    """Tarifa por clase de cabina en ARS o USD para un vuelo."""
 
     flight = models.ForeignKey(Vuelo, on_delete=models.CASCADE, related_name="fares", verbose_name="vuelo")
     cabin_class = models.CharField("clase", max_length=20, choices=ClaseCabina.choices)
     price_ars = models.DecimalField(
-        "precio (ARS)",
+        "precio",
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
+    currency = models.CharField("divisa", max_length=3, choices=Divisa.choices, default=Divisa.ARS)
     available_seats = models.PositiveIntegerField("asientos disponibles")
     baggage_included = models.CharField("equipaje incluido", max_length=120, blank=True, default="Equipaje de mano")
     is_refundable = models.BooleanField("reembolsable", default=False)
@@ -120,4 +127,4 @@ class TarifaVuelo(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.flight.flight_number} · {self.get_cabin_class_display()} (${self.price_ars} ARS)"
+        return f"{self.flight.flight_number} · {self.get_cabin_class_display()} (${self.price_ars} {self.currency})"

@@ -110,3 +110,24 @@ class PruebasVuelosAdmin(APITestCase):
             "fares": [self.payload["fares"][0], self.payload["fares"][0]],
         }
         self.assertIn("fares", self.client.post(URL, invalido_clases, format="json").data)
+
+    def test_actualiza_precio_y_divisa_en_vuelo_y_tarifa(self):
+        self.client.force_authenticate(self.admin_catalogo)
+        creado = self.client.post(URL, self.payload, format="json").data
+        url_vuelo = f"{URL}{creado['id']}/"
+
+        editado = self.client.patch(url_vuelo, {"base_price_ars": "450.00", "currency": "USD"}, format="json")
+        self.assertEqual(editado.status_code, status.HTTP_200_OK)
+        self.assertEqual(editado.data["currency"], "USD")
+        self.assertEqual(Decimal(editado.data["base_price_ars"]), Decimal("450.00"))
+
+        tarifa_id = creado["fares"][0]["id"]
+        tarifa_editada = self.client.patch(
+            f"/api/admin/fares/{tarifa_id}/", {"price_ars": "520.00", "currency": "USD"}, format="json"
+        )
+        self.assertEqual(tarifa_editada.status_code, status.HTTP_200_OK)
+        self.assertEqual(tarifa_editada.data["currency"], "USD")
+
+        invalida = self.client.patch(url_vuelo, {"currency": "JPY"}, format="json")
+        self.assertEqual(invalida.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("currency", invalida.data)

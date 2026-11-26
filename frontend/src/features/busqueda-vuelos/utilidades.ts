@@ -91,10 +91,14 @@ export function precioEnArs(vuelo: Pick<Vuelo, 'price' | 'currency'>): number {
   return vuelo.price * TASAS_CAMBIO_ARS[vuelo.currency]
 }
 
+export function cantidadEscalas(vuelo: Pick<Vuelo, 'stops' | 'stops_count'>): number {
+  return vuelo.stops_count ?? vuelo.stops.length
+}
+
 const COMPARADORES: Record<OrdenVuelos, (a: Vuelo, b: Vuelo) => number> = {
   precio: (a, b) => precioEnArs(a) - precioEnArs(b),
   duracion: (a, b) => a.duration_minutes - b.duration_minutes,
-  escalas: (a, b) => a.stops.length - b.stops.length,
+  escalas: (a, b) => cantidadEscalas(a) - cantidadEscalas(b),
 }
 
 /** Ordena por el criterio y sentido elegidos; los empates se resuelven por precio, duración e id. */
@@ -149,9 +153,10 @@ export function diasEntre(salida: string, llegada: string): number {
   return Math.round((dia(llegada) - dia(salida)) / 86_400_000)
 }
 
-export function textoEscalas(escalas: string[]): string {
-  if (escalas.length === 0) return 'Directo'
-  return escalas.length === 1 ? '1 escala' : `${escalas.length} escalas`
+export function textoEscalas(escalas: string[], cantidad?: number): string {
+  const total = cantidad ?? escalas.length
+  if (total === 0) return 'Directo'
+  return total === 1 ? '1 escala' : `${total} escalas`
 }
 
 /** Fecha de hoy en formato `YYYY-MM-DD`, en la zona horaria del navegador. */

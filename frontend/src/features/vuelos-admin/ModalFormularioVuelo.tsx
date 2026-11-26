@@ -13,9 +13,12 @@ import { leerFormulario } from '@/lib/formularios'
 
 import {
   ETIQUETAS_CLASE_CABINA,
+  ETIQUETAS_DIVISA_ADMIN,
+  useActualizarPrecioDivisa,
   useGuardarVuelo,
   type ClaseCabina,
   type DatosTarifaAdmin,
+  type DivisaAdmin,
   type VueloAdmin,
 } from './consultas'
 import { inputLocalAIso, isoAInputLocal } from './formato'
@@ -30,6 +33,7 @@ interface TarifaInicialForm {
   clave: number
   cabin_class: ClaseCabina
   price_ars: string
+  currency: DivisaAdmin
   available_seats: string
   baggage_included: string
   is_refundable: boolean
@@ -46,6 +50,7 @@ type CampoVueloForm =
   | 'arrival_at'
   | 'stops'
   | 'base_price_ars'
+  | 'currency'
   | 'cancellation_policy'
   | 'notes'
 
@@ -53,13 +58,16 @@ const CLASES_ORDEN: ClaseCabina[] = ['economy', 'premium_economy', 'business', '
 
 export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFormularioVuelo) {
   const guardar = useGuardarVuelo()
+  const actualizarPrecioDivisa = useActualizarPrecioDivisa()
   const errores = erroresDeCampos(guardar.error)
   const esEdicion = vuelo !== null
+  const tarifasActivas = vuelo?.fares.filter((tarifa) => tarifa.is_active) ?? []
   const [tarifasIniciales, setTarifasIniciales] = useState<TarifaInicialForm[]>([])
   const [contadorTarifas, setContadorTarifas] = useState(1)
 
   const cerrar = () => {
     guardar.reset()
+    actualizarPrecioDivisa.reset()
     setTarifasIniciales([])
     alCerrar()
   }
@@ -74,6 +82,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
         clave: contadorTarifas,
         cabin_class: siguienteClase,
         price_ars: '',
+        currency: 'ARS',
         available_seats: '20',
         baggage_included: 'Equipaje de mano',
         is_refundable: false,
@@ -94,11 +103,14 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
 
   const enviar = (formulario: HTMLFormElement) => {
     const valores = leerFormulario<CampoVueloForm>(formulario)
+    const sincronizarTarifa = new FormData(formulario).has('sincronizar_tarifa')
+    const divisaElegida = (valores.currency as DivisaAdmin) || 'ARS'
     const fares: DatosTarifaAdmin[] | undefined =
       !esEdicion && tarifasIniciales.length > 0
         ? tarifasIniciales.map((tarifa) => ({
             cabin_class: tarifa.cabin_class,
             price_ars: tarifa.price_ars.trim(),
+            currency: tarifa.currency,
             available_seats: Number(tarifa.available_seats || 0),
             baggage_included: tarifa.baggage_included.trim(),
             is_refundable: tarifa.is_refundable,
@@ -118,12 +130,26 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
         arrival_at: inputLocalAIso(valores.arrival_at),
         stops: Number(valores.stops || 0),
         base_price_ars: valores.base_price_ars,
+        currency: divisaElegida,
         cancellation_policy: valores.cancellation_policy,
         notes: valores.notes,
         ...(fares ? { fares } : {}),
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          if (esEdicion && sincronizarTarifa && tarifasActivas.length > 0) {
+            await Promise.all(
+              tarifasActivas.map((tarifa) =>
+                actualizarPrecioDivisa.mutateAsync({
+                  tipo: 'tarifa',
+                  flightId: vuelo.id,
+                  tarifaId: tarifa.id,
+                  precio: tarifasActivas.length === 1 ? valores.base_price_ars : tarifa.price_ars,
+                  currency: divisaElegida,
+                }),
+              ),
+            )
+          }
           toast.success(esEdicion ? 'Vuelo actualizado con éxito' : 'Vuelo creado con éxito')
           cerrar()
         },
@@ -138,8 +164,8 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
       titulo={esEdicion ? `Editar vuelo ${vuelo.flight_number}` : 'Nuevo vuelo'}
       descripcion={
         esEdicion
-          ? 'Modificá los datos operativos, horarios o precio base. Las tarifas por clase se administran aparte.'
-          : 'Cargá los datos del vuelo y opcionalmente sus tarifas iniciales por clase en ARS.'
+          ? 'Modificá los datos operativos, horarios, precio base o divisa (pesos o dólares). Las tarifas por clase se administran aparte.'
+          : 'Cargá los datos del vuelo, su divisa (ARS o USD) y opcionalmente sus tarifas iniciales por clase.'
       }
       alCerrar={cerrar}
     >
@@ -223,7 +249,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <CampoTexto
             etiqueta="Escalas"
             name="stops"
@@ -233,7 +259,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             error={errores.stops}
           />
           <CampoTexto
-            etiqueta="Precio base (ARS)"
+            etiqueta="Precio base"
             name="base_price_ars"
             type="number"
             min={0.01}
@@ -242,7 +268,44 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             defaultValue={vuelo?.base_price_ars}
             error={errores.base_price_ars}
           />
+          <CampoSeleccion
+            etiqueta="Divisa"
+            name="currency"
+            defaultValue={vuelo?.currency ?? 'ARS'}
+            error={errores.currency}
+          >
+            {entradasDe(ETIQUETAS_DIVISA_ADMIN).map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>
+                {etiqueta}
+              </option>
+            ))}
+          </CampoSeleccion>
         </div>
+
+        {esEdicion && tarifasActivas.length > 0 && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-ink-200 bg-paper px-3.5 py-2.5 text-xs text-ink-700">
+            <input
+              type="checkbox"
+              name="sincronizar_tarifa"
+              defaultChecked={tarifasActivas.length === 1}
+              className="mt-0.5 size-4 shrink-0 rounded border-ink-300"
+            />
+            <span>
+              {tarifasActivas.length === 1 ? (
+                <>
+                  Actualizar también la tarifa publicada (
+                  <strong className="text-ink-900">{ETIQUETAS_CLASE_CABINA[tarifasActivas[0].cabin_class]}</strong>) con
+                  este precio y divisa.
+                </>
+              ) : (
+                <>
+                  Aplicar también esta divisa a todas las tarifas activas del vuelo (los montos individuales se editan
+                  en <strong className="text-ink-900">Tarifas</strong>).
+                </>
+              )}
+            </span>
+          </label>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
@@ -295,7 +358,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
                 {tarifasIniciales.map((tarifa) => (
                   <div
                     key={tarifa.clave}
-                    className="grid items-end gap-3 rounded-lg border border-ink-200 bg-sheet p-3 sm:grid-cols-[1fr_8rem_6.5rem_1fr_auto]"
+                    className="grid items-end gap-3 rounded-lg border border-ink-200 bg-sheet p-3 sm:grid-cols-[1fr_7.5rem_7.5rem_5.5rem_1fr_auto]"
                   >
                     <CampoSeleccion
                       etiqueta="Clase"
@@ -310,13 +373,25 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
                     </CampoSeleccion>
 
                     <CampoTexto
-                      etiqueta="Precio ARS"
+                      etiqueta="Precio"
                       type="number"
                       min={0.01}
                       step="0.01"
                       value={tarifa.price_ars}
                       onChange={(e) => actualizarTarifa(tarifa.clave, { price_ars: e.target.value })}
                     />
+
+                    <CampoSeleccion
+                      etiqueta="Divisa"
+                      value={tarifa.currency}
+                      onChange={(e) => actualizarTarifa(tarifa.clave, { currency: e.target.value as DivisaAdmin })}
+                    >
+                      {entradasDe(ETIQUETAS_DIVISA_ADMIN).map(([valor, etiqueta]) => (
+                        <option key={valor} value={valor}>
+                          {etiqueta}
+                        </option>
+                      ))}
+                    </CampoSeleccion>
 
                     <CampoTexto
                       etiqueta="Asientos"
@@ -362,7 +437,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           <Boton variante="secondary" onClick={cerrar}>
             Cancelar
           </Boton>
-          <Boton type="submit" cargando={guardar.isPending}>
+          <Boton type="submit" cargando={guardar.isPending || actualizarPrecioDivisa.isPending}>
             {esEdicion ? 'Guardar cambios' : 'Crear vuelo'}
           </Boton>
         </div>

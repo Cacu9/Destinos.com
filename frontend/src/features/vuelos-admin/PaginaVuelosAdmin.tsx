@@ -21,7 +21,8 @@ import {
   type ClaseCabina,
   type VueloAdmin,
 } from './consultas'
-import { formatearArs, formatearDuracion, formatearFechaHoraCorta } from './formato'
+import { formatearDuracion, formatearFechaHoraCorta, formatearPrecioDivisa } from './formato'
+import { FormularioPrecioDivisa } from './FormularioPrecioDivisa'
 import { ModalFormularioVuelo } from './ModalFormularioVuelo'
 import { ModalTarifasVuelo } from './ModalTarifasVuelo'
 
@@ -62,13 +63,15 @@ export function PaginaVuelosAdmin() {
     <>
       <EncabezadoPaginaPanel
         titulo="Catálogo de vuelos"
-        descripcion="Administrá vuelos, precios base en ARS y tarifas por clase. Las bajas son lógicas para preservar el historial."
+        descripcion="Administrá vuelos, precios, divisa (ARS o USD) y tarifas por clase. Las bajas son lógicas para preservar el historial."
         accion={
           <Boton onClick={() => setFormulario({ abierto: true, vuelo: null })}>
             <Plus className="size-4" /> Nuevo vuelo
           </Boton>
         }
       />
+
+      <FormularioPrecioDivisa vuelos={vuelos} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -172,19 +175,19 @@ export function PaginaVuelosAdmin() {
                   </Td>
 
                   <Td>
-                    <p className={cn('font-bold', vuelo.is_active && 'text-ink-900')} data-numeric>
-                      Desde {formatearArs(vuelo.min_price_ars)}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className={cn('font-bold', vuelo.is_active && 'text-ink-900')} data-numeric>
+                        Base {formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)}
+                      </p>
+                      <span className="rounded bg-ink-100 px-1.5 py-0.5 map-label text-ink-700">{vuelo.currency}</span>
+                    </div>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
-                      {tarifasActivas.length > 0 ? (
-                        tarifasActivas.map((tarifa) => (
-                          <Insignia key={tarifa.id} tono="info">
-                            {ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]}
-                          </Insignia>
-                        ))
-                      ) : (
-                        <span className="text-xs text-ink-500">Base: {formatearArs(vuelo.base_price_ars)}</span>
-                      )}
+                      {tarifasActivas.map((tarifa) => (
+                        <Insignia key={tarifa.id} tono="info">
+                          {ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]} ·{' '}
+                          {formatearPrecioDivisa(tarifa.price_ars, tarifa.currency)} {tarifa.currency}
+                        </Insignia>
+                      ))}
                     </div>
                   </Td>
 

@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 
 from rest_framework import serializers
 
@@ -7,10 +7,11 @@ from catalog.models import TarifaVuelo, Vuelo
 
 class SerializadorTarifaPublica(serializers.ModelSerializer):
     cabin_class_display = serializers.CharField(source="get_cabin_class_display", read_only=True)
+    currency_display = serializers.CharField(source="get_currency_display", read_only=True)
 
     class Meta:
         model = TarifaVuelo
-        fields = ["id", "cabin_class", "cabin_class_display", "price_ars", "available_seats"]
+        fields = ["id", "cabin_class", "cabin_class_display", "price_ars", "currency", "currency_display", "available_seats"]
         read_only_fields = fields
 
 
@@ -21,10 +22,11 @@ class SerializadorTarifaDetalle(SerializadorTarifaPublica):
 
 
 class SerializadorVueloCatalogo(serializers.ModelSerializer):
-    """Vista resumida del catálogo público de vuelos y sus tarifas activas en ARS."""
+    """Vista resumida del catálogo público de vuelos y sus tarifas activas."""
 
     duration_minutes = serializers.IntegerField(read_only=True)
     min_price_ars = serializers.SerializerMethodField()
+    currency_display = serializers.CharField(source="get_currency_display", read_only=True)
     fares = SerializadorTarifaPublica(many=True, read_only=True)
 
     class Meta:
@@ -42,6 +44,8 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
             "duration_minutes",
             "stops",
             "base_price_ars",
+            "currency",
+            "currency_display",
             "min_price_ars",
             "fares",
         ]

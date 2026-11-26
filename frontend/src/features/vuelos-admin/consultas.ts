@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
 export type ClaseCabina = 'economy' | 'premium_economy' | 'business' | 'first'
+export type DivisaAdmin = 'ARS' | 'USD'
 
 export const ETIQUETAS_CLASE_CABINA: Record<ClaseCabina, string> = {
   economy: 'Económica',
@@ -11,12 +12,19 @@ export const ETIQUETAS_CLASE_CABINA: Record<ClaseCabina, string> = {
   first: 'Primera Clase',
 }
 
+export const ETIQUETAS_DIVISA_ADMIN: Record<DivisaAdmin, string> = {
+  ARS: 'Pesos (ARS)',
+  USD: 'Dólares (USD)',
+}
+
 export interface TarifaAdmin {
   id: number
   flight: number
   cabin_class: ClaseCabina
   cabin_class_display: string
   price_ars: string
+  currency: DivisaAdmin
+  currency_display?: string
   available_seats: number
   baggage_included: string
   is_refundable: boolean
@@ -38,6 +46,8 @@ export interface VueloAdmin {
   duration_minutes: number
   stops: number
   base_price_ars: string
+  currency: DivisaAdmin
+  currency_display?: string
   min_price_ars: string
   cancellation_policy: string
   notes: string
@@ -50,6 +60,7 @@ export interface VueloAdmin {
 export interface DatosTarifaAdmin {
   cabin_class: ClaseCabina
   price_ars: string
+  currency: DivisaAdmin
   available_seats: number
   baggage_included: string
   is_refundable: boolean
@@ -66,6 +77,7 @@ export interface DatosVueloAdmin {
   arrival_at: string
   stops: number
   base_price_ars: string
+  currency: DivisaAdmin
   cancellation_policy: string
   notes: string
   fares?: DatosTarifaAdmin[]
@@ -78,6 +90,10 @@ export interface FiltrosVuelosAdmin {
   direct_only?: boolean
   ordering?: string
 }
+
+export type DatosPrecioDivisa =
+  | { tipo: 'vuelo'; flightId: number; precio: string; currency: DivisaAdmin }
+  | { tipo: 'tarifa'; flightId: number; tarifaId: number; precio: string; currency: DivisaAdmin }
 
 const claveVuelos = ['admin', 'flights'] as const
 const claveTarifas = (flightId: number) => ['admin', 'flights', flightId, 'fares'] as const
@@ -112,7 +128,12 @@ function useMutacionVuelos<T>(mutationFn: (variables: T) => Promise<unknown>) {
   const clienteConsultas = useQueryClient()
   return useMutation({
     mutationFn,
-    onSuccess: () => clienteConsultas.invalidateQueries({ queryKey: claveVuelos }),
+    onSuccess: () => {
+      clienteConsultas.invalidateQueries({ queryKey: claveVuelos })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelos'] })
+      clienteConsultas.invalidateQueries({ queryKey: ['aeropuertos'] })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelo-detalle'] })
+    },
   })
 }
 
@@ -124,6 +145,28 @@ export function useGuardarVuelo() {
       return api<VueloAdmin>(`${URL_VUELOS}${id}/`, { metodo: 'PATCH', cuerpo: camposVuelo })
     }
     return api<VueloAdmin>(URL_VUELOS, { metodo: 'POST', cuerpo: datos })
+  })
+}
+
+export function useActualizarPrecioDivisa() {
+  const clienteConsultas = useQueryClient()
+  return useMutation<VueloAdmin | TarifaAdmin, Error, DatosPrecioDivisa>({
+    mutationFn: (datos: DatosPrecioDivisa) =>
+      datos.tipo === 'vuelo'
+        ? api<VueloAdmin>(`${URL_VUELOS}${datos.flightId}/`, {
+            metodo: 'PATCH',
+            cuerpo: { base_price_ars: datos.precio, currency: datos.currency },
+          })
+        : api<TarifaAdmin>(`${URL_TARIFAS}${datos.tarifaId}/`, {
+            metodo: 'PATCH',
+            cuerpo: { price_ars: datos.precio, currency: datos.currency },
+          }),
+    onSuccess: (_data, variables) => {
+      clienteConsultas.invalidateQueries({ queryKey: claveVuelos })
+      clienteConsultas.invalidateQueries({ queryKey: claveTarifas(variables.flightId) })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelos'] })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelo-detalle'] })
+    },
   })
 }
 
@@ -142,6 +185,8 @@ function useMutacionTarifa<T extends { flightId: number }>(mutationFn: (variable
     onSuccess: (_data, variables) => {
       clienteConsultas.invalidateQueries({ queryKey: claveVuelos })
       clienteConsultas.invalidateQueries({ queryKey: claveTarifas(variables.flightId) })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelos'] })
+      clienteConsultas.invalidateQueries({ queryKey: ['vuelo-detalle'] })
     },
   })
 }

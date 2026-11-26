@@ -30,10 +30,14 @@ export interface TramoVuelo {
   duration_minutes: number
   /** Códigos de los aeropuertos de escala de este tramo. Vacío si es directo. */
   stops: string[]
+  /** Cantidad numérica de escalas cuando la API no detalla los códigos de aeropuerto. */
+  stops_count?: number
 }
 
 export interface Vuelo {
   id: number
+  /** Identificador real en el backend (`/api/flights/<id>/`), cuando proviene de la API. */
+  backend_id?: number
   flight_number: string
   airline: Aerolinea
   flight_type: TipoVuelo
@@ -47,6 +51,8 @@ export interface Vuelo {
   duration_minutes: number
   /** Todos los aeropuertos de escala del itinerario, en orden. Vacío si es directo. */
   stops: string[]
+  /** Cantidad numérica de escalas cuando la API no detalla los códigos de aeropuerto. */
+  stops_count?: number
   /** Tramos del viaje: 1 para solo ida, 2 para ida y vuelta, 2 o más para multidestino. */
   legs: TramoVuelo[]
   category: CategoriaVuelo

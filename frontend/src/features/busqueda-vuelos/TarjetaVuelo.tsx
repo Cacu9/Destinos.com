@@ -1,8 +1,12 @@
-import { CalendarX2, Clock, ShieldCheck, TicketX } from 'lucide-react'
+import { CalendarX2, ChevronDown, ChevronUp, Clock, ShieldCheck, TicketX } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router'
 
 import { Insignia } from '@/components/ui/Insignia'
+import { useAutenticacion } from '@/features/sesion/useAutenticacion'
 import { cn } from '@/lib/cn'
 
+import { useDetalleVuelo } from './consultas'
 import { InsigniaTarifa } from './InsigniaTarifa'
 import {
   ETIQUETAS_CATEGORIA,
@@ -50,7 +54,18 @@ function Extremo({
 }
 
 /** La ruta entre los dos aeropuertos de un tramo: una línea con un punto por cada escala. */
-function Trayecto({ escalas, duracion }: { escalas: string[]; duracion: number }) {
+function Trayecto({
+  escalas,
+  cantidadEscalas,
+  duracion,
+}: {
+  escalas: string[]
+  cantidadEscalas?: number
+  duracion: number
+}) {
+  const totalEscalas = cantidadEscalas ?? escalas.length
+  const puntos = escalas.length > 0 ? escalas : Array.from({ length: totalEscalas }, (_, idx) => `E${idx + 1}`)
+
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 px-1 pt-1">
       <span className="flex items-center gap-1 text-[13px] text-ink-500">
@@ -59,14 +74,14 @@ function Trayecto({ escalas, duracion }: { escalas: string[]; duracion: number }
       <div className="relative flex w-full items-center" aria-hidden>
         <span className="size-2 rounded-full border-2 border-ink-900 bg-sheet" />
         <span className="flex flex-1 justify-evenly border-t-2 border-ink-900">
-          {escalas.map((escala) => (
+          {puntos.map((escala) => (
             <span key={escala} className="-mt-[5px] size-2 rounded-full bg-route-500 ring-2 ring-sheet" />
           ))}
         </span>
         <span className="size-2 rounded-full bg-ink-900" />
       </div>
-      <span className={cn('text-[13px] font-semibold', escalas.length === 0 ? 'text-fare-flexible' : 'text-route-600')}>
-        {textoEscalas(escalas)}
+      <span className={cn('text-[13px] font-semibold', totalEscalas === 0 ? 'text-fare-flexible' : 'text-route-600')}>
+        {textoEscalas(escalas, cantidadEscalas)}
         {escalas.length > 0 && <span className="font-normal text-ink-500"> · {escalas.join(', ')}</span>}
       </span>
     </div>
@@ -97,7 +112,7 @@ function FilaTramo({ tramo, etiqueta }: { tramo: TramoVuelo; etiqueta?: string }
           ciudad={tramo.origin.city}
           alineacion="izquierda"
         />
-        <Trayecto escalas={tramo.stops} duracion={tramo.duration_minutes} />
+        <Trayecto escalas={tramo.stops} cantidadEscalas={tramo.stops_count} duracion={tramo.duration_minutes} />
         <div className="relative">
           <Extremo
             hora={formatearHora(tramo.arrival)}
@@ -126,8 +141,13 @@ interface PropsTarjetaVuelo {
 
 /** Un vuelo como pase de abordar: los tramos a la izquierda y, en el talón, tarifa, divisa y precio. */
 export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
+  const { usuario } = useAutenticacion()
+  const [mostrarDetalle, setMostrarDetalle] = useState(false)
+  const detalle = useDetalleVuelo(vuelo.backend_id, Boolean(usuario) && mostrarDetalle)
   const IconoCancelacion = ICONOS_CANCELACION[vuelo.fare]
   const variosTramos = vuelo.legs.length > 1
+  const tarifaDetalle = detalle.data?.fares.find((f) => f.cabin_class === vuelo.category)
+  const resumenCancelacion = detalle.data?.cancellation_policy || vuelo.cancellation_summary
 
   return (
     <article
@@ -169,18 +189,58 @@ export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
               <strong className="text-ink-900">{formatearDuracion(vuelo.duration_minutes)}</strong>
             </span>
             <span>
-              Escalas totales: <strong className="text-ink-900">{textoEscalas(vuelo.stops)}</strong>
+              Escalas totales: <strong className="text-ink-900">{textoEscalas(vuelo.stops, vuelo.stops_count)}</strong>
             </span>
           </div>
         )}
 
-        <p className="flex items-start gap-2 border-t border-ink-100 pt-4 text-[13px] text-ink-700">
-          <IconoCancelacion className="mt-px size-4 shrink-0 text-ink-500" aria-hidden />
-          <span>
-            <span className="font-semibold text-ink-900">Cancelación: </span>
-            {vuelo.cancellation_summary}
-          </span>
-        </p>
+        <div className="border-t border-ink-100 pt-4 text-[13px] text-ink-700">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="flex items-start gap-2">
+              <IconoCancelacion className="mt-px size-4 shrink-0 text-ink-500" aria-hidden />
+              <span>
+                <span className="font-semibold text-ink-900">Cancelación: </span>
+                {resumenCancelacion}
+              </span>
+            </p>
+            {vuelo.backend_id !== undefined &&
+              (usuario ? (
+                <button
+                  type="button"
+                  onClick={() => setMostrarDetalle((abierto) => !abierto)}
+                  className="inline-flex cursor-pointer items-center gap-1 font-semibold text-shield-700 hover:underline"
+                >
+                  {mostrarDetalle ? 'Ocultar detalle' : 'Ver detalle'}
+                  {mostrarDetalle ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                </button>
+              ) : (
+                <Link to="/ingresar" className="font-semibold text-shield-700 hover:underline">
+                  Ingresar
+                </Link>
+              ))}
+          </div>
+
+          {mostrarDetalle && detalle.isPending && <p className="mt-2 text-xs text-ink-500">Cargando detalle...</p>}
+          {mostrarDetalle && detalle.data && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-paper px-3 py-2 text-xs text-ink-700">
+              {tarifaDetalle && (
+                <>
+                  <span>
+                    Equipaje: <strong className="text-ink-900">{tarifaDetalle.baggage_included}</strong>
+                  </span>
+                  <span>
+                    Reembolso: <strong className="text-ink-900">{tarifaDetalle.is_refundable ? 'Sí' : 'No'}</strong>
+                  </span>
+                </>
+              )}
+              {detalle.data.notes && (
+                <span>
+                  Notas: <strong className="text-ink-900">{detalle.data.notes}</strong>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="relative flex flex-col justify-between gap-3 border-ink-200 bg-paper/70 p-5 max-sm:border-t-2 max-sm:border-dashed sm:w-60 sm:border-l-2 sm:border-dashed">

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { adaptarVuelosApi } from '../src/features/busqueda-vuelos/adaptadorApi.ts'
 import {
   filtrosDesdeParametros,
   ordenarVuelos,
@@ -143,5 +144,45 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
     })
     assert.equal(ordenDesdeParametros(invalidos), 'precio')
     assert.equal(sentidoDesdeParametros(invalidos), 'asc')
+  })
+
+  it('adapta vuelos del backend conservando divisa ARS/USD, tarifas y escalas numéricas', () => {
+    const adaptados = adaptarVuelosApi(
+      [
+        {
+          id: 2,
+          flight_number: 'FO5210',
+          airline: 'Flybondi',
+          origin_city: 'Buenos Aires',
+          origin_code: 'EZE',
+          destination_city: 'Mendoza',
+          destination_code: 'MDZ',
+          departure_at: '2026-12-03T10:00:00-03:00',
+          arrival_at: '2026-12-03T11:50:00-03:00',
+          duration_minutes: 110,
+          stops: 1,
+          base_price_ars: '800.00',
+          currency: 'USD',
+          min_price_ars: 800,
+          fares: [
+            {
+              id: 3,
+              cabin_class: 'economy',
+              cabin_class_display: 'Económica',
+              price_ars: '800.00',
+              currency: 'USD',
+              available_seats: 20,
+            },
+          ],
+        },
+      ],
+      {},
+    )
+
+    assert.equal(adaptados.length, 1)
+    assert.equal(adaptados[0].currency, 'USD')
+    assert.equal(adaptados[0].price, 800)
+    assert.equal(adaptados[0].stops_count, 1)
+    assert.equal(adaptados[0].backend_id, 2)
   })
 })

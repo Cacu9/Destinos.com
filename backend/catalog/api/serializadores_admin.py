@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 
 from django.db import transaction
 from rest_framework import serializers
@@ -8,6 +8,7 @@ from catalog.models import TarifaVuelo, Vuelo
 
 class SerializadorTarifaAdmin(serializers.ModelSerializer):
     cabin_class_display = serializers.CharField(source="get_cabin_class_display", read_only=True)
+    currency_display = serializers.CharField(source="get_currency_display", read_only=True)
 
     class Meta:
         model = TarifaVuelo
@@ -17,6 +18,8 @@ class SerializadorTarifaAdmin(serializers.ModelSerializer):
             "cabin_class",
             "cabin_class_display",
             "price_ars",
+            "currency",
+            "currency_display",
             "available_seats",
             "baggage_included",
             "is_refundable",
@@ -43,6 +46,7 @@ class SerializadorVueloAdmin(serializers.ModelSerializer):
 
     duration_minutes = serializers.IntegerField(read_only=True)
     min_price_ars = serializers.SerializerMethodField()
+    currency_display = serializers.CharField(source="get_currency_display", read_only=True)
     fares = SerializadorTarifaAdmin(many=True, required=False)
 
     class Meta:
@@ -60,6 +64,8 @@ class SerializadorVueloAdmin(serializers.ModelSerializer):
             "duration_minutes",
             "stops",
             "base_price_ars",
+            "currency",
+            "currency_display",
             "min_price_ars",
             "cancellation_policy",
             "notes",

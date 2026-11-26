@@ -14,15 +14,17 @@ import { entradasDe } from '@/lib/entradas'
 
 import {
   ETIQUETAS_CLASE_CABINA,
+  ETIQUETAS_DIVISA_ADMIN,
   useDarDeBajaTarifa,
   useGuardarTarifa,
   useReactivarTarifa,
   useTarifasVueloAdmin,
   type ClaseCabina,
+  type DivisaAdmin,
   type TarifaAdmin,
   type VueloAdmin,
 } from './consultas'
-import { formatearArs } from './formato'
+import { formatearPrecioDivisa } from './formato'
 
 interface PropsModalTarifasVuelo {
   abierto: boolean
@@ -42,6 +44,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
   const [modo, setModo] = useState<ModoFormulario>({ tipo: 'cerrado' })
   const [clase, setClase] = useState<ClaseCabina>('economy')
   const [precio, setPrecio] = useState('')
+  const [currency, setCurrency] = useState<DivisaAdmin>('ARS')
   const [asientos, setAsientos] = useState('20')
   const [equipaje, setEquipaje] = useState('Equipaje de mano')
   const [reembolsable, setReembolsable] = useState(false)
@@ -55,6 +58,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
     guardar.reset()
     setClase(clasesDisponibles[0]?.[0] ?? 'economy')
     setPrecio(vuelo?.base_price_ars ?? '')
+    setCurrency(vuelo?.currency ?? 'ARS')
     setAsientos('20')
     setEquipaje('Equipaje de mano')
     setReembolsable(false)
@@ -65,6 +69,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
     guardar.reset()
     setClase(tarifa.cabin_class)
     setPrecio(tarifa.price_ars)
+    setCurrency(tarifa.currency)
     setAsientos(String(tarifa.available_seats))
     setEquipaje(tarifa.baggage_included)
     setReembolsable(tarifa.is_refundable)
@@ -88,6 +93,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
         flightId: vuelo.id,
         cabin_class: clase,
         price_ars: precio.trim(),
+        currency,
         available_seats: Number(asientos || 0),
         baggage_included: equipaje.trim(),
         is_refundable: reembolsable,
@@ -108,7 +114,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
       titulo={vuelo ? `Tarifas de ${vuelo.flight_number}` : 'Tarifas'}
       descripcion={
         vuelo
-          ? `${vuelo.origin_city} (${vuelo.origin_code}) → ${vuelo.destination_city} (${vuelo.destination_code}) · Precio base ${formatearArs(vuelo.base_price_ars)}`
+          ? `${vuelo.origin_city} (${vuelo.origin_code}) → ${vuelo.destination_city} (${vuelo.destination_code}) · Precio base ${formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)} ${vuelo.currency}`
           : undefined
       }
       alCerrar={cerrarModal}
@@ -116,8 +122,8 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-500">
-            Cada clase de cabina admite una única tarifa por vuelo. Podés editar precios, cupos, equipaje o darla de
-            baja lógica.
+            Cada clase de cabina admite una única tarifa por vuelo. Podés editar precios, divisa (ARS o USD), cupos,
+            equipaje o darla de baja lógica.
           </p>
           {modo.tipo === 'cerrado' && clasesDisponibles.length > 0 && (
             <Boton tamano="sm" onClick={abrirCrear}>
@@ -140,7 +146,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
               </h3>
             </div>
             <AlertaFormulario mensaje={errorDeFormulario(guardar.error)} />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <CampoSeleccion
                 etiqueta="Clase"
                 value={clase}
@@ -158,7 +164,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
               </CampoSeleccion>
 
               <CampoTexto
-                etiqueta="Precio (ARS)"
+                etiqueta="Precio"
                 type="number"
                 min={0.01}
                 step="0.01"
@@ -166,6 +172,19 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
                 error={errores.price_ars}
                 onChange={(e) => setPrecio(e.target.value)}
               />
+
+              <CampoSeleccion
+                etiqueta="Divisa"
+                value={currency}
+                error={errores.currency}
+                onChange={(e) => setCurrency(e.target.value as DivisaAdmin)}
+              >
+                {entradasDe(ETIQUETAS_DIVISA_ADMIN).map(([valor, etiqueta]) => (
+                  <option key={valor} value={valor}>
+                    {etiqueta}
+                  </option>
+                ))}
+              </CampoSeleccion>
 
               <CampoTexto
                 etiqueta="Asientos"
@@ -213,7 +232,9 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
           <div className="rounded-xl border border-dashed border-ink-300 bg-paper/40 px-4 py-8 text-center">
             <Tag className="mx-auto mb-2 size-5 text-ink-500" />
             <p className="text-sm font-semibold text-ink-900">Este vuelo todavía no tiene tarifas por clase</p>
-            <p className="mt-1 text-xs text-ink-500">Mientras tanto se usa su precio base en ARS.</p>
+            <p className="mt-1 text-xs text-ink-500">
+              Mientras tanto se usa su precio base ({vuelo?.currency ?? 'ARS'}).
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
@@ -230,6 +251,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
                     <Insignia tono={tarifa.is_active ? 'info' : 'neutral'}>
                       {ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]}
                     </Insignia>
+                    <span className="rounded bg-ink-100 px-1.5 py-0.5 map-label text-ink-700">{tarifa.currency}</span>
                     <Insignia tono={tarifa.is_refundable ? 'positive' : 'warning'}>
                       {tarifa.is_refundable ? 'Reembolsable' : 'No reembolsable'}
                     </Insignia>
@@ -237,7 +259,7 @@ export function ModalTarifasVuelo({ abierto, vuelo, alCerrar }: PropsModalTarifa
                   </div>
                   <p className="text-sm text-ink-700">
                     <strong className="font-bold text-ink-900" data-numeric>
-                      {formatearArs(tarifa.price_ars)}
+                      {formatearPrecioDivisa(tarifa.price_ars, tarifa.currency)} {tarifa.currency}
                     </strong>{' '}
                     · {tarifa.available_seats} {tarifa.available_seats === 1 ? 'asiento' : 'asientos'} ·{' '}
                     {tarifa.baggage_included || 'Sin equipaje especificado'}
