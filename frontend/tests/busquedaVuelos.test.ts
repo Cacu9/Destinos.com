@@ -165,6 +165,7 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
           base_price_ars: '800.00',
           currency: 'USD',
           min_price_ars: 800,
+          cancellation_summary: 'Permite cambio con penalidad hasta 24 h antes.',
           fares: [
             {
               id: 3,
@@ -173,6 +174,7 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
               price_ars: '800.00',
               currency: 'USD',
               available_seats: 20,
+              is_refundable: false,
             },
           ],
         },
@@ -185,6 +187,7 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
     assert.equal(adaptados[0].price, 800)
     assert.equal(adaptados[0].stops_count, 1)
     assert.equal(adaptados[0].backend_id, 2)
+    assert.equal(adaptados[0].cancellation_summary, 'No reembolsable · Permite cambio con penalidad hasta 24 h antes.')
   })
 
   it('calcula pasajeros totales combinando mayores y menores desde la URL', () => {

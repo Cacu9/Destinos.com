@@ -1,4 +1,4 @@
-from datetime import timedelta
+﻿from datetime import timedelta
 from decimal import Decimal
 
 from django.utils import timezone
@@ -92,6 +92,8 @@ class PruebasVuelosPublicos(APITestCase):
         brc = respuesta.data[0]
         self.assertEqual(Decimal(brc["min_price_ars"]), Decimal("180000.00"))
         self.assertEqual([t["cabin_class"] for t in brc["fares"]], [ClaseCabina.ECONOMY, ClaseCabina.BUSINESS])
+        self.assertEqual(brc["cancellation_summary"], "Cancelación sin cargo hasta 48h antes.")
+        self.assertFalse(brc["fares"][0]["is_refundable"])
         self.assertNotIn("cancellation_policy", brc)
 
     def test_filtros_catalogo_publico(self):
