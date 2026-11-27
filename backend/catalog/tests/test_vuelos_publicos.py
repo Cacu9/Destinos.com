@@ -1,4 +1,4 @@
-from datetime import timedelta
+﻿from datetime import timedelta
 from decimal import Decimal
 
 from django.utils import timezone
@@ -92,6 +92,8 @@ class PruebasVuelosPublicos(APITestCase):
         brc = respuesta.data[0]
         self.assertEqual(Decimal(brc["min_price_ars"]), Decimal("180000.00"))
         self.assertEqual([t["cabin_class"] for t in brc["fares"]], [ClaseCabina.ECONOMY, ClaseCabina.BUSINESS])
+        self.assertEqual(brc["cancellation_summary"], "Cancelación sin cargo hasta 48h antes.")
+        self.assertFalse(brc["fares"][0]["is_refundable"])
         self.assertNotIn("cancellation_policy", brc)
 
     def test_filtros_catalogo_publico(self):
@@ -124,3 +126,15 @@ class PruebasVuelosPublicos(APITestCase):
 
         respuesta = self.client.get(f"/api/flights/{self.vuelo_inactivo.pk}/")
         self.assertEqual(respuesta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cambios_de_destino_se_reflejan_en_vuelos_publicos(self):
+        from catalog.models import Destino
+
+        destino = Destino.objects.get(code="BRC")
+        destino.city = "San Carlos de Bariloche"
+        destino.save(update_fields=["city"])
+        encontrados = self.client.get("/api/flights/", {"destination": "San Carlos"}).data
+        self.assertEqual([vuelo["destination_city"] for vuelo in encontrados], ["San Carlos de Bariloche"])
+        destino.is_active = False
+        destino.save(update_fields=["is_active"])
+        self.assertEqual(self.client.get("/api/flights/", {"destination": "BRC"}).data, [])

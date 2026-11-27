@@ -19,6 +19,8 @@ const PARAMETROS_URL = {
   category: 'categoria',
   date: 'fecha',
   passengers: 'pasajeros',
+  adults: 'mayores',
+  children: 'menores',
 } as const satisfies Record<keyof FiltrosVuelos, string>
 
 export const PARAMETRO_ORDEN = 'orden'
@@ -57,7 +59,21 @@ export function filtrosDesdeParametros(parametros: URLSearchParams): FiltrosVuel
     category: valorDe(parametros.get(PARAMETROS_URL.category), ETIQUETAS_CATEGORIA),
     date: fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : undefined,
     passengers: cantidadPasajeros(parametros.get(PARAMETROS_URL.passengers)),
+    ...(parametros.has(PARAMETROS_URL.adults)
+      ? { adults: cantidadPasajeros(parametros.get(PARAMETROS_URL.adults)) }
+      : {}),
+    ...(parametros.has(PARAMETROS_URL.children)
+      ? { children: cantidadPasajeros(parametros.get(PARAMETROS_URL.children)) }
+      : {}),
+    ...(parametros.has(PARAMETROS_URL.adults) ? { adults: cantidadPasajeros(parametros.get(PARAMETROS_URL.adults)) } : {}),
+    ...(parametros.has(PARAMETROS_URL.children)
+      ? { children: cantidadPasajeros(parametros.get(PARAMETROS_URL.children)) }
+      : {}),
   }
+}
+
+export function cantidadParaBuscar(filtros: FiltrosVuelos): number {
+  return (filtros.adults ?? 0) + (filtros.children ?? 0) || filtros.passengers || 1
 }
 
 export function ordenDesdeParametros(parametros: URLSearchParams): OrdenVuelos {

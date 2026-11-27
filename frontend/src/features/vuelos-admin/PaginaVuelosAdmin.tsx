@@ -9,6 +9,8 @@ import { DialogoConfirmacion } from '@/components/ui/DialogoConfirmacion'
 import { EstadoVacio } from '@/components/ui/EstadoVacio'
 import { Insignia } from '@/components/ui/Insignia'
 import { BotonIcono, Tabla, Td, Th } from '@/components/ui/Tabla'
+import { useAeropuertos } from '@/features/busqueda-vuelos/consultas'
+import { PAIS_LOCAL } from '@/features/busqueda-vuelos/tipos'
 import { EncabezadoPaginaPanel } from '@/features/sesion/EncabezadoPaginaPanel'
 import { cn } from '@/lib/cn'
 import { entradasDe } from '@/lib/entradas'
@@ -31,11 +33,17 @@ type EstadoFormulario = { abierto: false } | { abierto: true; vuelo: VueloAdmin 
 
 export function PaginaVuelosAdmin() {
   const [busqueda, setBusqueda] = useState('')
+  const [origen, setOrigen] = useState('')
+  const [destino, setDestino] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('activos')
   const [clase, setClase] = useState<ClaseCabina | ''>('')
   const [formulario, setFormulario] = useState<EstadoFormulario>({ abierto: false })
   const [vueloTarifas, setVueloTarifas] = useState<VueloAdmin | null>(null)
   const [vueloADarDeBaja, setVueloADarDeBaja] = useState<VueloAdmin | null>(null)
+
+  const { data: aeropuertos = [] } = useAeropuertos()
+  const locales = aeropuertos.filter((a) => a.country.trim().toLowerCase() === PAIS_LOCAL.toLowerCase())
+  const exteriores = aeropuertos.filter((a) => a.country.trim().toLowerCase() !== PAIS_LOCAL.toLowerCase())
 
   const {
     data: vuelos = [],
@@ -43,6 +51,8 @@ export function PaginaVuelosAdmin() {
     error,
   } = useVuelosAdmin({
     search: busqueda.trim() || undefined,
+    origin: origen || undefined,
+    destination: destino || undefined,
     is_active: estado === 'todos' ? undefined : estado === 'activos',
     cabin_class: clase || undefined,
   })
@@ -81,6 +91,60 @@ export function PaginaVuelosAdmin() {
             onChange={(e) => setBusqueda(e.target.value)}
             aria-label="Buscar vuelos"
           />
+
+          <select
+            aria-label="Filtrar por origen"
+            value={origen}
+            onChange={(e) => setOrigen(e.target.value)}
+            className="h-10 rounded-lg border border-ink-200 bg-sheet px-3 text-sm text-ink-900 hover:border-ink-300 focus:border-shield-600 focus:outline-none"
+          >
+            <option value="">Todos los orígenes</option>
+            {locales.length > 0 && (
+              <optgroup label="Local (Argentina)">
+                {locales.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.city} ({a.code})
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {exteriores.length > 0 && (
+              <optgroup label="Exterior">
+                {exteriores.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.city} ({a.code})
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+
+          <select
+            aria-label="Filtrar por destino"
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+            className="h-10 rounded-lg border border-ink-200 bg-sheet px-3 text-sm text-ink-900 hover:border-ink-300 focus:border-shield-600 focus:outline-none"
+          >
+            <option value="">Todos los destinos</option>
+            {locales.length > 0 && (
+              <optgroup label="Local (Argentina)">
+                {locales.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.city} ({a.code})
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {exteriores.length > 0 && (
+              <optgroup label="Exterior">
+                {exteriores.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.city} ({a.code})
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
 
           <select
             aria-label="Filtrar por clase"
@@ -127,7 +191,7 @@ export function PaginaVuelosAdmin() {
           <EstadoVacio
             titulo="No hay vuelos para mostrar"
             descripcion={
-              busqueda || estado !== 'todos' || clase
+              busqueda || origen || destino || estado !== 'todos' || clase
                 ? 'Probá limpiando los filtros o creá un nuevo vuelo.'
                 : 'Todavía no se cargaron vuelos en el catálogo.'
             }
@@ -175,20 +239,30 @@ export function PaginaVuelosAdmin() {
                   </Td>
 
                   <Td>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className={cn('font-bold', vuelo.is_active && 'text-ink-900')} data-numeric>
-                        Base {formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)}
-                      </p>
-                      <span className="rounded bg-ink-100 px-1.5 py-0.5 map-label text-ink-700">{vuelo.currency}</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-1">
-                      {tarifasActivas.map((tarifa) => (
-                        <Insignia key={tarifa.id} tono="info">
-                          {ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]} ·{' '}
-                          {formatearPrecioDivisa(tarifa.price_ars, tarifa.currency)} {tarifa.currency}
-                        </Insignia>
-                      ))}
-                    </div>
+                    {tarifasActivas.length > 0 ? (
+                      <>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {tarifasActivas.map((tarifa) => (
+                            <Insignia key={tarifa.id} tono="info">
+                              {ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]} ·{' '}
+                              {formatearPrecioDivisa(tarifa.price_ars, tarifa.currency)} {tarifa.currency}
+                            </Insignia>
+                          ))}
+                        </div>
+                        <p className="mt-1 text-xs text-ink-500" data-numeric>
+                          Ref. base: {formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)} {vuelo.currency}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className={cn('font-bold', vuelo.is_active && 'text-ink-900')} data-numeric>
+                          {formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)}
+                        </p>
+                        <span className="rounded bg-ink-100 px-1.5 py-0.5 map-label text-ink-700">
+                          {vuelo.currency}
+                        </span>
+                      </div>
+                    )}
                   </Td>
 
                   <Td>

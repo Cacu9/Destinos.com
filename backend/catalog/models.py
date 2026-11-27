@@ -1,6 +1,6 @@
 ﻿from decimal import Decimal
 
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Min, Prefetch, Q
 from django.db.models.functions import Coalesce
@@ -128,3 +128,69 @@ class TarifaVuelo(models.Model):
 
     def __str__(self) -> str:
         return f"{self.flight.flight_number} · {self.get_cabin_class_display()} (${self.price_ars} {self.currency})"
+
+
+class Destino(models.Model):
+    city = models.CharField("ciudad", max_length=100)
+    region = models.CharField("provincia o estado", max_length=100)
+    country = models.CharField("país", max_length=100)
+    name = models.CharField("aeropuerto", max_length=120)
+    code = models.CharField("código IATA", max_length=3, unique=True)
+    is_active = models.BooleanField("activo", default=True)
+
+    class Meta:
+        ordering = ["city", "code"]
+
+    def __str__(self):
+        return f"{self.city} ({self.code})"
+
+class TipoAlojamiento(models.TextChoices):
+    HOTEL = "hotel", "Hotel"
+    APARTMENT = "apartment", "Departamento"
+    CABIN = "cabin", "Cabaña"
+    HOSTEL = "hostel", "Hostel"
+    RESORT = "resort", "Resort"
+
+
+class Alojamiento(models.Model):
+    """Alojamiento publicado en el catálogo con tarifa por noche en ARS o USD."""
+
+    name = models.CharField("nombre", max_length=120)
+    accommodation_type = models.CharField("tipo", max_length=20, choices=TipoAlojamiento.choices, default=TipoAlojamiento.HOTEL)
+    destination_code = models.CharField("código IATA", max_length=3)
+    city = models.CharField("ciudad", max_length=100)
+    address = models.CharField("dirección", max_length=160)
+    stars = models.PositiveSmallIntegerField(
+        "estrellas", default=3, validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    price_per_night = models.DecimalField(
+        "precio por noche",
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    currency = models.CharField("divisa", max_length=3, choices=Divisa.choices, default=Divisa.ARS)
+    max_guests = models.PositiveSmallIntegerField("huéspedes máximos", default=2, validators=[MinValueValidator(1)])
+    available_rooms = models.PositiveIntegerField("habitaciones disponibles", default=1)
+    amenities = models.CharField("servicios incluidos", max_length=240, blank=True)
+    cancellation_policy = models.TextField("política de cancelación", blank=True)
+    is_refundable = models.BooleanField("reembolsable", default=True)
+    is_active = models.BooleanField("activo", default=True)
+    created_at = models.DateTimeField("creado el", auto_now_add=True)
+    updated_at = models.DateTimeField("actualizado el", auto_now=True)
+
+    class Meta:
+        ordering = ["price_per_night", "id"]
+        verbose_name = "alojamiento"
+        verbose_name_plural = "alojamientos"
+        constraints = [
+            models.CheckConstraint(condition=models.Q(price_per_night__gt=0), name="alojamiento_precio_positivo"),
+            models.CheckConstraint(condition=models.Q(stars__gte=1, stars__lte=5), name="alojamiento_estrellas_validas"),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.destination_code = self.destination_code.strip().upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.destination_code})"

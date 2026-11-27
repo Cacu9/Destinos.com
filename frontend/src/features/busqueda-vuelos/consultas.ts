@@ -2,21 +2,26 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { api } from '@/lib/api'
 
-import { adaptarVuelosApi, extraerAeropuertos, type VueloCatalogoApi, type VueloDetalleApi } from './adaptadorApi'
-import type { FiltrosVuelos } from './tipos'
+import { adaptarVuelosApi, type VueloCatalogoApi, type VueloDetalleApi } from './adaptadorApi'
+import type { Aeropuerto, FiltrosVuelos } from './tipos'
+import { cantidadParaBuscar } from './utilidades'
+
+export const claveAeropuertos = ['aeropuertos'] as const
 
 export function useAeropuertos() {
   return useQuery({
-    queryKey: ['aeropuertos'],
-    queryFn: async () => {
-      const vuelos = await api<VueloCatalogoApi[]>('/flights/')
-      return extraerAeropuertos(vuelos)
-    },
+    queryKey: claveAeropuertos,
+    queryFn: () => api<Aeropuerto[]>('/airports/'),
     staleTime: 60_000,
   })
 }
 
 export function useBusquedaVuelos(filtros: FiltrosVuelos) {
+  const pasajeros =
+    filtros.passengers !== undefined || filtros.adults !== undefined || filtros.children !== undefined
+      ? cantidadParaBuscar(filtros)
+      : undefined
+
   return useQuery({
     queryKey: ['vuelos', filtros],
     queryFn: async () => {
@@ -26,7 +31,7 @@ export function useBusquedaVuelos(filtros: FiltrosVuelos) {
           destination: filtros.destination,
           departure_date: filtros.date,
           cabin_class: filtros.category,
-          min_seats: filtros.passengers,
+          min_seats: pasajeros,
         },
       })
       return adaptarVuelosApi(vuelosApi, filtros)

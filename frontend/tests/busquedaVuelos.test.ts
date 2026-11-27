@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import { adaptarVuelosApi } from '../src/features/busqueda-vuelos/adaptadorApi.ts'
 import {
+  cantidadParaBuscar,
   filtrosDesdeParametros,
   ordenarVuelos,
   ordenDesdeParametros,
@@ -164,6 +165,7 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
           base_price_ars: '800.00',
           currency: 'USD',
           min_price_ars: 800,
+          cancellation_summary: 'Permite cambio con penalidad hasta 24 h antes.',
           fares: [
             {
               id: 3,
@@ -172,6 +174,7 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
               price_ars: '800.00',
               currency: 'USD',
               available_seats: 20,
+              is_refundable: false,
             },
           ],
         },
@@ -184,5 +187,39 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
     assert.equal(adaptados[0].price, 800)
     assert.equal(adaptados[0].stops_count, 1)
     assert.equal(adaptados[0].backend_id, 2)
+    assert.equal(adaptados[0].cancellation_summary, 'No reembolsable · Permite cambio con penalidad hasta 24 h antes.')
+  })
+
+  it('calcula pasajeros totales combinando mayores y menores desde la URL', () => {
+    const filtros = filtrosDesdeParametros(new URLSearchParams('mayores=2&menores=3'))
+    assert.equal(filtros.adults, 2)
+    assert.equal(filtros.children, 3)
+    assert.equal(cantidadParaBuscar(filtros), 5)
+  })
+
+  it('refleja la ciudad actualizada de un destino en el catálogo de vuelos', () => {
+    const adaptados = adaptarVuelosApi(
+      [
+        {
+          id: 1,
+          flight_number: 'AR1680',
+          airline: 'Aerolíneas Argentinas',
+          origin_city: 'Buenos Aires',
+          origin_code: 'AEP',
+          destination_city: 'San Carlos de Bariloche',
+          destination_code: 'BRC',
+          departure_at: '2026-12-02T06:00:00-03:00',
+          arrival_at: '2026-12-02T08:25:00-03:00',
+          duration_minutes: 145,
+          stops: 0,
+          base_price_ars: '185000.00',
+          currency: 'ARS',
+          min_price_ars: 185000,
+          fares: [],
+        },
+      ],
+      {},
+    )
+    assert.equal(adaptados[0].destination.city, 'San Carlos de Bariloche')
   })
 })

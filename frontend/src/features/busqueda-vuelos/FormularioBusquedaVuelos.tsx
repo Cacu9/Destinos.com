@@ -16,7 +16,7 @@ import {
 } from './tipos'
 import { fechaDeHoy, filtrosDesdeParametros, hayFiltrosActivos } from './utilidades'
 
-type CampoFiltro = 'tipo' | 'origen' | 'destino' | 'categoria' | 'fecha' | 'pasajeros'
+type CampoFiltro = 'tipo' | 'origen' | 'destino' | 'categoria' | 'fecha' | 'mayores' | 'menores'
 
 interface PropsFormularioBusquedaVuelos {
   filtros: FiltrosVuelos
@@ -46,12 +46,18 @@ export function FormularioBusquedaVuelos({ filtros, aeropuertos, alBuscar, alLim
   const [origen, setOrigen] = useState(filtros.origin ?? '')
   const [destino, setDestino] = useState(filtros.destination ?? '')
   const mismoAeropuerto = origen !== '' && origen === destino
+  const [errorPasajeros, setErrorPasajeros] = useState<string>()
   const conFiltros = hayFiltrosActivos(filtros)
 
   const enviar = (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
     if (mismoAeropuerto) return
     const datos = leerFormulario<CampoFiltro>(evento.currentTarget)
+    if (Number(datos.mayores) + Number(datos.menores) > MAXIMO_PASAJEROS) {
+      setErrorPasajeros(`Elegí hasta ${MAXIMO_PASAJEROS} pasajeros en total.`)
+      return
+    }
+    setErrorPasajeros(undefined)
     alBuscar(filtrosDesdeParametros(new URLSearchParams(datos)))
   }
 
@@ -100,7 +106,7 @@ export function FormularioBusquedaVuelos({ filtros, aeropuertos, alBuscar, alLim
         </CampoSeleccion>
       </div>
 
-      <div className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+      <div className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <CampoTexto
           etiqueta="Fecha de salida"
           name="fecha"
@@ -109,11 +115,25 @@ export function FormularioBusquedaVuelos({ filtros, aeropuertos, alBuscar, alLim
           defaultValue={filtros.date}
         />
 
-        <CampoSeleccion etiqueta="Pasajeros" name="pasajeros" defaultValue={filtros.passengers ?? ''}>
-          <option value="">Cualquier cantidad</option>
+        <CampoSeleccion
+          etiqueta="Mayores"
+          name="mayores"
+          defaultValue={filtros.adults ?? filtros.passengers ?? ''}
+          error={errorPasajeros}
+        >
+          <option value="">Sin especificar</option>
           {Array.from({ length: MAXIMO_PASAJEROS }, (_, indice) => indice + 1).map((cantidad) => (
             <option key={cantidad} value={cantidad}>
-              {cantidad} {cantidad === 1 ? 'pasajero' : 'pasajeros'}
+              {cantidad}
+            </option>
+          ))}
+        </CampoSeleccion>
+
+        <CampoSeleccion etiqueta="Menores" name="menores" defaultValue={filtros.children ?? ''}>
+          <option value="">Sin especificar</option>
+          {Array.from({ length: MAXIMO_PASAJEROS }, (_, indice) => indice + 1).map((cantidad) => (
+            <option key={cantidad} value={cantidad}>
+              {cantidad}
             </option>
           ))}
         </CampoSeleccion>

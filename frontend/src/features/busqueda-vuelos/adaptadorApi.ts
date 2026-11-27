@@ -7,6 +7,7 @@ import {
   type TarifaVuelo,
   type Vuelo,
 } from './tipos.ts'
+import { cantidadParaBuscar } from './utilidades.ts'
 import { AEROPUERTOS_DEMO } from './vuelosDemo.ts'
 
 export interface TarifaPublicaApi {
@@ -17,6 +18,7 @@ export interface TarifaPublicaApi {
   currency: Divisa
   currency_display?: string
   available_seats: number
+  is_refundable?: boolean
 }
 
 export interface TarifaDetalleApi extends TarifaPublicaApi {
@@ -40,6 +42,7 @@ export interface VueloCatalogoApi {
   currency: Divisa
   currency_display?: string
   min_price_ars: number | string
+  cancellation_summary?: string
   fares: TarifaPublicaApi[]
 }
 
@@ -54,7 +57,7 @@ const AEROPUERTOS_POR_CODIGO = new Map(AEROPUERTOS_DEMO.map((aeropuerto) => [aer
 
 function aAeropuerto(codigo: string, ciudad: string): Aeropuerto {
   const conocido = AEROPUERTOS_POR_CODIGO.get(codigo)
-  if (conocido) return conocido
+  if (conocido) return { ...conocido, city: ciudad }
   return {
     code: codigo,
     name: ciudad,
@@ -68,17 +71,29 @@ function codigoAerolinea(numeroVuelo: string, aerolinea: string): string {
   return prefijo ?? aerolinea.slice(0, 2).toUpperCase()
 }
 
-function tipoTarifaSegunClase(clase: CategoriaVuelo): TarifaVuelo {
-  if (clase === 'business' || clase === 'first') return 'flexible'
+function tipoTarifa(clase: CategoriaVuelo, reembolsable?: boolean): TarifaVuelo {
+  if (reembolsable === true) return 'flexible'
+  if (clase === 'business' || clase === 'first') return reembolsable === false ? 'standard' : 'flexible'
   if (clase === 'premium_economy') return 'standard'
   return 'promotional'
+}
+
+function resumenCancelacion(resumenVuelo?: string, reembolsable?: boolean): string {
+  const texto = resumenVuelo?.trim()
+  if (texto && reembolsable !== undefined) {
+    return `${reembolsable ? 'Reembolsable' : 'No reembolsable'} · ${texto}`
+  }
+  if (texto) return texto
+  return reembolsable
+    ? 'Permite cancelación con reembolso según condiciones de la tarifa.'
+    : 'Tarifa sin reembolso. Consultá condiciones de cambio antes de confirmar.'
 }
 
 /** Convierte la respuesta de `GET /api/flights/` al modelo de tarjetas de `/vuelos`. */
 export function adaptarVuelosApi(vuelosApi: VueloCatalogoApi[], filtros: FiltrosVuelos): Vuelo[] {
   if (filtros.flight_type && filtros.flight_type !== 'one_way') return []
 
-  const pasajerosMinimos = filtros.passengers ?? 1
+  const pasajerosMinimos = cantidadParaBuscar(filtros)
   const resultado: Vuelo[] = []
 
   for (const vueloApi of vuelosApi) {
@@ -94,6 +109,7 @@ export function adaptarVuelosApi(vuelosApi: VueloCatalogoApi[], filtros: Filtros
       precio: number,
       divisa: Divisa,
       asientos: number,
+      reembolsable?: boolean,
     ): Vuelo => ({
       id,
       backend_id: vueloApi.id,
@@ -120,11 +136,11 @@ export function adaptarVuelosApi(vuelosApi: VueloCatalogoApi[], filtros: Filtros
         },
       ],
       category: categoria,
-      fare: tipoTarifaSegunClase(categoria),
+      fare: tipoTarifa(categoria, reembolsable),
       price: precio,
       currency: divisa,
       seats_available: asientos,
-      cancellation_summary: 'Consultá las condiciones de cancelación y equipaje al iniciar sesión.',
+      cancellation_summary: resumenCancelacion(vueloApi.cancellation_summary, reembolsable),
     })
 
     if (vueloApi.fares.length === 0) {
@@ -146,6 +162,7 @@ export function adaptarVuelosApi(vuelosApi: VueloCatalogoApi[], filtros: Filtros
           Number(tarifa.price_ars),
           tarifa.currency ?? vueloApi.currency ?? 'ARS',
           tarifa.available_seats,
+          tarifa.is_refundable,
         ),
       )
     }

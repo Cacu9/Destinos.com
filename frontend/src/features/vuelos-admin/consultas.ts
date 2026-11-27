@@ -85,6 +85,8 @@ export interface DatosVueloAdmin {
 
 export interface FiltrosVuelosAdmin {
   search?: string
+  origin?: string
+  destination?: string
   is_active?: boolean
   cabin_class?: ClaseCabina
   direct_only?: boolean
@@ -107,6 +109,8 @@ export function useVuelosAdmin(filtros: FiltrosVuelosAdmin = {}) {
       api<VueloAdmin[]>(URL_VUELOS, {
         parametros: {
           search: filtros.search,
+          origin: filtros.origin,
+          destination: filtros.destination,
           is_active: filtros.is_active,
           cabin_class: filtros.cabin_class,
           direct_only: filtros.direct_only,

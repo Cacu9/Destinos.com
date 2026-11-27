@@ -53,6 +53,14 @@ class FiltroVuelos(filters.FilterSet):
         return queryset.filter(Exists(self._tarifas_vuelo().filter(available_seats__gte=value)))
 
 
+class FiltroVuelosPublicos(FiltroVuelos):
+    def filtrar_origen(self, queryset, name, value):
+        return queryset.filter(Q(origin_code__icontains=value) | Q(public_origin_city__icontains=value))
+
+    def filtrar_destino(self, queryset, name, value):
+        return queryset.filter(Q(destination_code__icontains=value) | Q(public_destination_city__icontains=value))
+
+
 class FiltroVuelosAdmin(FiltroVuelos):
     """Extiende los filtros de vuelos para incluir el estado activo/inactivo en administración."""
 

@@ -5,6 +5,7 @@ import { FormularioBusquedaVuelos } from './FormularioBusquedaVuelos'
 import { ResultadosVuelos } from './ResultadosVuelos'
 import type { FiltrosVuelos, OrdenVuelos, SentidoOrden } from './tipos'
 import {
+  cantidadParaBuscar,
   filtrosDesdeParametros,
   hayFiltrosActivos,
   ordenDesdeParametros,
@@ -57,7 +58,7 @@ export function PaginaBusquedaVuelos() {
           error={busqueda.error}
           orden={orden}
           sentido={sentido}
-          pasajeros={filtros.passengers ?? 1}
+          pasajeros={cantidadParaBuscar(filtros)}
           hayFiltros={hayFiltrosActivos(filtros)}
           alCambiarOrden={ordenar}
           alCambiarSentido={cambiarSentido}

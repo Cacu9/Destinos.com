@@ -11,22 +11,34 @@ class SerializadorTarifaPublica(serializers.ModelSerializer):
 
     class Meta:
         model = TarifaVuelo
-        fields = ["id", "cabin_class", "cabin_class_display", "price_ars", "currency", "currency_display", "available_seats"]
+        fields = [
+            "id",
+            "cabin_class",
+            "cabin_class_display",
+            "price_ars",
+            "currency",
+            "currency_display",
+            "available_seats",
+            "is_refundable",
+        ]
         read_only_fields = fields
 
 
 class SerializadorTarifaDetalle(SerializadorTarifaPublica):
     class Meta(SerializadorTarifaPublica.Meta):
-        fields = [*SerializadorTarifaPublica.Meta.fields, "baggage_included", "is_refundable"]
+        fields = [*SerializadorTarifaPublica.Meta.fields, "baggage_included"]
         read_only_fields = fields
 
 
 class SerializadorVueloCatalogo(serializers.ModelSerializer):
     """Vista resumida del catálogo público de vuelos y sus tarifas activas."""
 
+    origin_city = serializers.CharField(source="public_origin_city", read_only=True)
+    destination_city = serializers.CharField(source="public_destination_city", read_only=True)
     duration_minutes = serializers.IntegerField(read_only=True)
     min_price_ars = serializers.SerializerMethodField()
     currency_display = serializers.CharField(source="get_currency_display", read_only=True)
+    cancellation_summary = serializers.SerializerMethodField()
     fares = SerializadorTarifaPublica(many=True, read_only=True)
 
     class Meta:
@@ -47,6 +59,7 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
             "currency",
             "currency_display",
             "min_price_ars",
+            "cancellation_summary",
             "fares",
         ]
         read_only_fields = fields
@@ -57,6 +70,14 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
             return precio_anotado
         precios = [tarifa.price_ars for tarifa in obj.fares.all() if tarifa.is_active]
         return min(precios) if precios else obj.base_price_ars
+
+    def get_cancellation_summary(self, obj: Vuelo) -> str:
+        politica = " ".join(obj.cancellation_policy.split())
+        if politica:
+            return politica if len(politica) <= 140 else f"{politica[:137].rstrip()}..."
+        if any(tarifa.is_active and tarifa.is_refundable for tarifa in obj.fares.all()):
+            return "Permite cancelación con reembolso según condiciones de la tarifa."
+        return "Tarifa sin reembolso. Consultá condiciones de cambio antes de confirmar."
 
 
 class SerializadorVueloDetalle(SerializadorVueloCatalogo):

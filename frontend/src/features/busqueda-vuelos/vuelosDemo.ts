@@ -13,6 +13,7 @@ import type {
   TramoVuelo,
   Vuelo,
 } from './tipos.ts'
+import { cantidadParaBuscar } from './utilidades.ts'
 
 export const AEROPUERTOS_DEMO: Aeropuerto[] = [
   { code: 'AEP', name: 'Aeroparque Jorge Newbery', city: 'Buenos Aires', country: 'Argentina' },
@@ -405,6 +406,6 @@ export function buscarVuelosDemo(filtros: FiltrosVuelos, fechaBase = new Date())
       (!filtros.destination || coincideDestino(vuelo, filtros.destination)) &&
       (!filtros.category || vuelo.category === filtros.category) &&
       (!filtros.date || vuelo.departure.startsWith(filtros.date)) &&
-      vuelo.seats_available >= (filtros.passengers ?? 1),
+      vuelo.seats_available >= cantidadParaBuscar(filtros),
   )
 }
