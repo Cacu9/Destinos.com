@@ -9,6 +9,8 @@ import { PaginaAlojamientosAdmin } from '@/features/alojamientos-admin/PaginaAlo
 import { PaginaBusquedaVuelos } from '@/features/busqueda-vuelos/PaginaBusquedaVuelos'
 import { PaginaCuentas } from '@/features/cuentas-admin/PaginaCuentas'
 import { PaginaDestinosAdmin } from '@/features/destinos-admin/PaginaDestinosAdmin'
+import { PaginaPoliticasAdmin } from '@/features/politicas-admin/PaginaPoliticasAdmin'
+import { PaginaPreciosAdmin } from '@/features/precios-admin/PaginaPreciosAdmin'
 import { PaginaVuelosAdmin } from '@/features/vuelos-admin/PaginaVuelosAdmin'
 import { PaginaRegistro } from '@/features/registro/PaginaRegistro'
 import { EstructuraPanel } from '@/features/sesion/EstructuraPanel'
@@ -73,6 +75,22 @@ export function Aplicacion() {
                 element={
                   <RequiereArea areas={['general', 'catalog']}>
                     <PaginaVuelosAdmin />
+                  </RequiereArea>
+                }
+              />
+              <Route
+                path="precios"
+                element={
+                  <RequiereArea areas={['general', 'catalog']}>
+                    <PaginaPreciosAdmin />
+                  </RequiereArea>
+                }
+              />
+              <Route
+                path="politicas"
+                element={
+                  <RequiereArea areas={['general', 'catalog']}>
+                    <PaginaPoliticasAdmin />
                   </RequiereArea>
                 }
               />

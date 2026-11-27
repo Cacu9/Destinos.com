@@ -33,8 +33,14 @@ const CAMPOS = [
 type Campo = (typeof CAMPOS)[number][0]
 type FiltroEstado = 'todos' | 'activos' | 'inactivos'
 type FiltroAlcance = 'todos' | 'local' | 'exterior'
-type Destino = Record<Campo, string> & { id: number; is_active: boolean }
-type Cambio = { id?: number; datos: Record<Campo, string> } | { baja: number } | { reactivar: number }
+type Destino = Record<Campo, string> & {
+  id: number
+  is_active: boolean
+  latitude: string | null
+  longitude: string | null
+}
+type DatosDestino = Record<Campo, string> & { latitude?: number; longitude?: number }
+type Cambio = { id?: number; datos: DatosDestino } | { baja: number } | { reactivar: number }
 
 function esLocal(pais: string): boolean {
   return pais.trim().toLowerCase() === PAIS_LOCAL.toLowerCase()
@@ -120,8 +126,11 @@ export function PaginaDestinosAdmin() {
 
   const enviar = (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
-    const datos = leerFormulario<Campo>(evento.currentTarget)
-    datos.code = datos.code.toUpperCase()
+    const { latitude, longitude, ...campos } = leerFormulario<Campo | 'latitude' | 'longitude'>(evento.currentTarget)
+    const datos: DatosDestino = { ...campos, code: campos.code.toUpperCase() }
+    // Las coordenadas son opcionales: si el código IATA es conocido, el servidor las completa solo.
+    if (latitude) datos.latitude = Number(latitude.replace(',', '.'))
+    if (longitude) datos.longitude = Number(longitude.replace(',', '.'))
 
     const validacion: Partial<Record<Campo, string>> = {}
     for (const [campo] of CAMPOS) {
@@ -141,7 +150,7 @@ export function PaginaDestinosAdmin() {
   }
 
   const erroresApi = erroresDeCampos(guardar.error)
-  const errores = { ...erroresApi, ...erroresLocales }
+  const errores: Record<string, string | undefined> = { ...erroresApi, ...erroresLocales }
 
   return (
     <>
@@ -382,6 +391,30 @@ export function PaginaDestinosAdmin() {
               defaultValue={edicion?.name}
               error={errores.name}
             />
+
+            <fieldset className="grid gap-4 rounded-lg border border-ink-200 bg-paper/60 p-4 sm:grid-cols-2">
+              <legend className="px-1 map-label text-ink-500">Ubicación en el mapa (opcional)</legend>
+              <CampoTexto
+                name="latitude"
+                etiqueta="Latitud"
+                inputMode="decimal"
+                placeholder="Ej.: 38.1760"
+                defaultValue={edicion?.latitude ?? ''}
+                error={errores.latitude}
+              />
+              <CampoTexto
+                name="longitude"
+                etiqueta="Longitud"
+                inputMode="decimal"
+                placeholder="Ej.: 13.0910"
+                defaultValue={edicion?.longitude ?? ''}
+                error={errores.longitude}
+              />
+              <p className="text-xs text-ink-500 sm:col-span-2">
+                Si el código IATA es conocido, se ubica solo. Cargalas para aeropuertos nuevos así aparecen en el mapa
+                de vuelos.
+              </p>
+            </fieldset>
 
             <div className="mt-2 flex justify-end gap-3">
               <Boton

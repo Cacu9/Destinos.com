@@ -3,8 +3,10 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { Insignia } from '@/components/ui/Insignia'
+import { estiloTramo } from '@/features/mapa/colores'
 import { useAutenticacion } from '@/features/sesion/useAutenticacion'
 import { cn } from '@/lib/cn'
+import { textoEquivalente } from '@/lib/divisas'
 
 import { useDetalleVuelo } from './consultas'
 import { InsigniaTarifa } from './InsigniaTarifa'
@@ -36,18 +38,28 @@ function Extremo({
   codigo,
   ciudad,
   alineacion,
+  diasDeMas = 0,
 }: {
   hora: string
   codigo: string
   ciudad: string
   alineacion: 'izquierda' | 'derecha'
+  /** Días después de la salida en que llega (vuelos nocturnos o largos). */
+  diasDeMas?: number
 }) {
   return (
     <div className={cn('min-w-0', alineacion === 'derecha' && 'text-right')}>
       <p className="text-2xl leading-none font-extrabold font-expanded sm:text-3xl" data-numeric>
         {hora}
       </p>
-      <p className="mt-1.5 text-sm font-bold">{codigo}</p>
+      <p className="mt-1.5 text-sm font-bold">
+        {diasDeMas > 0 && (
+          <span className="mr-1.5 rounded bg-route-50 px-1 py-px text-[11px] font-semibold text-route-600">
+            {diasDeMas === 1 ? 'llega al día siguiente' : `llega ${diasDeMas} días después`}
+          </span>
+        )}
+        {codigo}
+      </p>
       <p className="truncate text-[13px] text-ink-500">{ciudad}</p>
     </div>
   )
@@ -93,13 +105,15 @@ function etiquetaTramo(tipo: TipoVuelo, indice: number): string {
   return `Tramo ${indice + 1}`
 }
 
-function FilaTramo({ tramo, etiqueta }: { tramo: TramoVuelo; etiqueta?: string }) {
-  const diasDeMas = diasEntre(tramo.departure, tramo.arrival)
+function FilaTramo({ tramo, etiqueta, indice }: { tramo: TramoVuelo; etiqueta?: string; indice: number }) {
   return (
     <div className="flex flex-col gap-2">
       {etiqueta && (
         <div className="flex items-center justify-between text-xs text-ink-500">
-          <span className="map-label text-shield-700">{etiqueta}</span>
+          <span className={cn('flex items-center gap-1.5 map-label', estiloTramo(indice).texto)}>
+            <span aria-hidden className={cn('h-[3px] w-4 rounded-full', estiloTramo(indice).swatch)} />
+            {etiqueta}
+          </span>
           <span>
             {tramo.flight_number} · {formatearFecha(tramo.departure)}
           </span>
@@ -113,22 +127,13 @@ function FilaTramo({ tramo, etiqueta }: { tramo: TramoVuelo; etiqueta?: string }
           alineacion="izquierda"
         />
         <Trayecto escalas={tramo.stops} cantidadEscalas={tramo.stops_count} duracion={tramo.duration_minutes} />
-        <div className="relative">
-          <Extremo
-            hora={formatearHora(tramo.arrival)}
-            codigo={tramo.destination.code}
-            ciudad={tramo.destination.city}
-            alineacion="derecha"
-          />
-          {diasDeMas > 0 && (
-            <span
-              className="absolute -top-2 -right-1 text-[11px] font-bold text-route-600"
-              title={`Llega ${diasDeMas === 1 ? 'al día siguiente' : `${diasDeMas} días después`}`}
-            >
-              +{diasDeMas}
-            </span>
-          )}
-        </div>
+        <Extremo
+          hora={formatearHora(tramo.arrival)}
+          codigo={tramo.destination.code}
+          ciudad={tramo.destination.city}
+          alineacion="derecha"
+          diasDeMas={diasEntre(tramo.departure, tramo.arrival)}
+        />
       </div>
     </div>
   )
@@ -137,10 +142,14 @@ function FilaTramo({ tramo, etiqueta }: { tramo: TramoVuelo; etiqueta?: string }
 interface PropsTarjetaVuelo {
   vuelo: Vuelo
   pasajeros: number
+  /** La tarjeta cuya ruta muestra el mapa. */
+  activa?: boolean
+  /** Se llama al pasar el mouse o enfocar la tarjeta, para dibujar su ruta en el mapa. */
+  alActivar?: () => void
 }
 
 /** Un vuelo como pase de abordar: los tramos a la izquierda y, en el talón, tarifa, divisa y precio. */
-export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
+export function TarjetaVuelo({ vuelo, pasajeros, activa = false, alActivar }: PropsTarjetaVuelo) {
   const { usuario } = useAutenticacion()
   const [mostrarDetalle, setMostrarDetalle] = useState(false)
   const detalle = useDetalleVuelo(vuelo.backend_id, Boolean(usuario) && mostrarDetalle)
@@ -152,7 +161,12 @@ export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
   return (
     <article
       aria-label={`${vuelo.airline.name} ${vuelo.flight_number}, ${vuelo.origin.city} a ${vuelo.destination.city}`}
-      className="flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-sheet shadow-sheet transition-shadow hover:shadow-float sm:flex-row"
+      onMouseEnter={alActivar}
+      onFocus={alActivar}
+      className={cn(
+        'flex flex-col overflow-hidden rounded-xl border bg-sheet shadow-sheet transition-[box-shadow,border-color] duration-200 hover:shadow-float sm:flex-row',
+        activa ? 'border-ink-900 shadow-float' : 'border-ink-200',
+      )}
     >
       <div className="flex flex-1 flex-col gap-5 p-5">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -177,7 +191,11 @@ export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
               key={`${tramo.flight_number}-${tramo.departure}`}
               className={cn(indice > 0 && 'border-t border-ink-100 pt-3')}
             >
-              <FilaTramo tramo={tramo} etiqueta={variosTramos ? etiquetaTramo(vuelo.flight_type, indice) : undefined} />
+              <FilaTramo
+                tramo={tramo}
+                indice={indice}
+                etiqueta={variosTramos ? etiquetaTramo(vuelo.flight_type, indice) : undefined}
+              />
             </div>
           ))}
         </div>
@@ -189,7 +207,14 @@ export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
               <strong className="text-ink-900">{formatearDuracion(vuelo.duration_minutes)}</strong>
             </span>
             <span>
-              Escalas totales: <strong className="text-ink-900">{textoEscalas(vuelo.stops, vuelo.stops_count)}</strong>
+              {(vuelo.stops_count ?? vuelo.stops.length) === 0 ? (
+                <strong className="text-ink-900">Todos los tramos son directos</strong>
+              ) : (
+                <>
+                  Escalas totales:{' '}
+                  <strong className="text-ink-900">{textoEscalas(vuelo.stops, vuelo.stops_count)}</strong>
+                </>
+              )}
             </span>
           </div>
         )}
@@ -265,6 +290,15 @@ export function TarjetaVuelo({ vuelo, pasajeros }: PropsTarjetaVuelo) {
               ? `en ${vuelo.currency} · por pasajero`
               : `total ${pasajeros} pasajeros · ${formatearPrecio(vuelo.price, vuelo.currency)} ${vuelo.currency} c/u`}
           </p>
+          {textoEquivalente(vuelo.price * pasajeros, vuelo.currency) && (
+            <p
+              className="mt-1 text-[13px] font-semibold text-ink-700"
+              data-numeric
+              title="Convertido a la cotización de referencia"
+            >
+              {textoEquivalente(vuelo.price * pasajeros, vuelo.currency)}
+            </p>
+          )}
           {vuelo.seats_available <= 3 && (
             <p className="mt-1 text-[13px] font-semibold text-route-600">
               {vuelo.seats_available === 1 ? 'Queda 1 asiento' : `Quedan ${vuelo.seats_available} asientos`}

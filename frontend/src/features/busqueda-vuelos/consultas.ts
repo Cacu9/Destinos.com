@@ -27,6 +27,7 @@ export function useBusquedaVuelos(filtros: FiltrosVuelos) {
     queryFn: async () => {
       const vuelosApi = await api<VueloCatalogoApi[]>('/flights/', {
         parametros: {
+          trip_type: filtros.flight_type,
           origin: filtros.origin,
           destination: filtros.destination,
           departure_date: filtros.date,

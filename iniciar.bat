@@ -24,6 +24,7 @@ pushd backend
 .venv\Scripts\python manage.py migrate -v 0 || goto :error
 rem Datos de demostracion (no se duplican si ya existen).
 .venv\Scripts\python manage.py cargar_usuarios >nul || goto :error
+.venv\Scripts\python manage.py cargar_vuelos >nul || goto :error
 popd
 
 if not exist frontend\node_modules (

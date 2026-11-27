@@ -1,12 +1,28 @@
 from django.contrib import admin
 
-from .models import TarifaVuelo, Vuelo
+from .models import Destino, TarifaVuelo, TramoPolitica, TramoVuelo, Vuelo
 
 
 class TarifaVueloInline(admin.TabularInline):
     model = TarifaVuelo
     extra = 1
     fields = ["cabin_class", "price_ars", "available_seats", "baggage_included", "is_refundable", "is_active"]
+
+
+class TramoVueloInline(admin.TabularInline):
+    model = TramoVuelo
+    extra = 0
+
+
+class TramoPoliticaInline(admin.TabularInline):
+    model = TramoPolitica
+    extra = 0
+
+
+@admin.register(Destino)
+class AdminDestino(admin.ModelAdmin):
+    list_display = ["code", "city", "country", "latitude", "longitude", "is_active"]
+    search_fields = ["code", "city", "country"]
 
 
 @admin.register(Vuelo)
@@ -24,7 +40,7 @@ class AdminVuelo(admin.ModelAdmin):
     list_filter = ["airline", "origin_code", "destination_code", "is_active", "stops"]
     search_fields = ["flight_number", "airline", "origin_city", "origin_code", "destination_city", "destination_code"]
     ordering = ["departure_at"]
-    inlines = [TarifaVueloInline]
+    inlines = [TarifaVueloInline, TramoVueloInline, TramoPoliticaInline]
 
 
 @admin.register(TarifaVuelo)

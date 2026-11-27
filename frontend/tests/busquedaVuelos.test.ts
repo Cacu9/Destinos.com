@@ -222,4 +222,51 @@ describe('Búsqueda de vuelos (SCRUM-58 a SCRUM-62)', () => {
     )
     assert.equal(adaptados[0].destination.city, 'San Carlos de Bariloche')
   })
+
+  it('adapta un multidestino del backend con todos sus tramos y filtra por tipo de viaje', () => {
+    const api = [
+      {
+        id: 7,
+        flight_number: 'IB6860',
+        airline: 'Iberia',
+        origin_city: 'Buenos Aires',
+        origin_code: 'EZE',
+        destination_city: 'Madrid',
+        destination_code: 'MAD',
+        departure_at: '2026-12-10T13:05:00-03:00',
+        arrival_at: '2026-12-11T01:45:00-03:00',
+        duration_minutes: 835,
+        stops: 0,
+        total_stops: 0,
+        trip_type: 'multi_city' as const,
+        base_price_ars: '1590.00',
+        currency: 'USD' as const,
+        min_price_ars: 1590,
+        is_non_refundable: true,
+        cancellation_summary: 'No reembolsable.',
+        fares: [],
+        legs: [
+          {
+            position: 2,
+            flight_number: 'IB1024',
+            origin_city: 'Madrid',
+            origin_code: 'MAD',
+            destination_city: 'Barcelona',
+            destination_code: 'BCN',
+            departure_at: '2026-12-14T10:00:00-03:00',
+            arrival_at: '2026-12-14T11:15:00-03:00',
+            duration_minutes: 75,
+            stops: 0,
+          },
+        ],
+      },
+    ]
+    const [vuelo] = adaptarVuelosApi(api, {})
+    assert.equal(vuelo.flight_type, 'multi_city')
+    assert.equal(vuelo.legs.length, 2)
+    assert.equal(vuelo.destination.code, 'BCN')
+    assert.equal(vuelo.fare, 'promotional')
+    assert.equal(vuelo.cancellation_summary, 'No reembolsable.')
+    assert.equal(adaptarVuelosApi(api, { flight_type: 'one_way' }).length, 0)
+  })
 })

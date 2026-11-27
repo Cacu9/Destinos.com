@@ -10,6 +10,7 @@ import {
   type SentidoOrden,
   type Vuelo,
 } from './tipos.ts'
+import { COTIZACION_USD_ARS } from '../../lib/divisas.ts'
 
 /** Nombre de cada filtro en la URL de la página (y en los campos del formulario). */
 const PARAMETROS_URL = {
@@ -31,8 +32,8 @@ export const SENTIDO_POR_DEFECTO: SentidoOrden = 'asc'
 /** Cotización de referencia en ARS para comparar precios de distintas divisas al ordenar. */
 const TASAS_CAMBIO_ARS: Record<Divisa, number> = {
   ARS: 1,
-  USD: 1200,
-  EUR: 1300,
+  USD: COTIZACION_USD_ARS,
+  EUR: Math.round(COTIZACION_USD_ARS * 1.08),
 }
 
 function valorDe<K extends string>(valor: string | null, etiquetas: Record<K, string>): K | undefined {
@@ -65,7 +66,9 @@ export function filtrosDesdeParametros(parametros: URLSearchParams): FiltrosVuel
     ...(parametros.has(PARAMETROS_URL.children)
       ? { children: cantidadPasajeros(parametros.get(PARAMETROS_URL.children)) }
       : {}),
-    ...(parametros.has(PARAMETROS_URL.adults) ? { adults: cantidadPasajeros(parametros.get(PARAMETROS_URL.adults)) } : {}),
+    ...(parametros.has(PARAMETROS_URL.adults)
+      ? { adults: cantidadPasajeros(parametros.get(PARAMETROS_URL.adults)) }
+      : {}),
     ...(parametros.has(PARAMETROS_URL.children)
       ? { children: cantidadPasajeros(parametros.get(PARAMETROS_URL.children)) }
       : {}),

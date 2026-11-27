@@ -13,10 +13,12 @@ import { useAeropuertos } from '@/features/busqueda-vuelos/consultas'
 import { PAIS_LOCAL } from '@/features/busqueda-vuelos/tipos'
 import { EncabezadoPaginaPanel } from '@/features/sesion/EncabezadoPaginaPanel'
 import { cn } from '@/lib/cn'
+import { textoEquivalente } from '@/lib/divisas'
 import { entradasDe } from '@/lib/entradas'
 
 import {
   ETIQUETAS_CLASE_CABINA,
+  ETIQUETAS_TIPO_VIAJE,
   useDarDeBajaVuelo,
   useReactivarVuelo,
   useVuelosAdmin,
@@ -24,7 +26,6 @@ import {
   type VueloAdmin,
 } from './consultas'
 import { formatearDuracion, formatearFechaHoraCorta, formatearPrecioDivisa } from './formato'
-import { FormularioPrecioDivisa } from './FormularioPrecioDivisa'
 import { ModalFormularioVuelo } from './ModalFormularioVuelo'
 import { ModalTarifasVuelo } from './ModalTarifasVuelo'
 
@@ -80,8 +81,6 @@ export function PaginaVuelosAdmin() {
           </Boton>
         }
       />
-
-      <FormularioPrecioDivisa vuelos={vuelos} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -229,12 +228,30 @@ export function PaginaVuelosAdmin() {
                   </Td>
 
                   <Td>
-                    <p className={cn('font-semibold', vuelo.is_active && 'text-ink-900')}>
-                      {vuelo.origin_city} ({vuelo.origin_code}) → {vuelo.destination_city} ({vuelo.destination_code})
+                    <p
+                      className={cn(
+                        'flex flex-wrap items-center gap-2 font-semibold',
+                        vuelo.is_active && 'text-ink-900',
+                      )}
+                    >
+                      {vuelo.legs.length === 0
+                        ? `${vuelo.origin_city} (${vuelo.origin_code}) → ${vuelo.destination_city} (${vuelo.destination_code})`
+                        : [
+                            vuelo.origin_code,
+                            vuelo.destination_code,
+                            ...vuelo.legs.map((tramo) => tramo.destination_code),
+                          ].join(' → ')}
+                      {vuelo.trip_type !== 'one_way' && (
+                        <Insignia tono="neutral">{ETIQUETAS_TIPO_VIAJE[vuelo.trip_type]}</Insignia>
+                      )}
                     </p>
                     <p className="text-xs text-ink-500">
                       Sale {formatearFechaHoraCorta(vuelo.departure_at)} · {formatearDuracion(vuelo.duration_minutes)} ·{' '}
-                      {vuelo.stops === 0 ? 'Directo' : vuelo.stops === 1 ? '1 escala' : `${vuelo.stops} escalas`}
+                      {vuelo.total_stops === 0
+                        ? 'Directo'
+                        : vuelo.total_stops === 1
+                          ? '1 escala'
+                          : `${vuelo.total_stops} escalas`}
                     </p>
                   </Td>
 
@@ -250,7 +267,9 @@ export function PaginaVuelosAdmin() {
                           ))}
                         </div>
                         <p className="mt-1 text-xs text-ink-500" data-numeric>
-                          Ref. base: {formatearPrecioDivisa(vuelo.base_price_ars, vuelo.currency)} {vuelo.currency}
+                          Desde {formatearPrecioDivisa(vuelo.min_price_ars, tarifasActivas[0].currency)}{' '}
+                          {tarifasActivas[0].currency} ·{' '}
+                          {textoEquivalente(Number(vuelo.min_price_ars), tarifasActivas[0].currency)}
                         </p>
                       </>
                     ) : (
@@ -325,6 +344,7 @@ export function PaginaVuelosAdmin() {
       )}
 
       <ModalFormularioVuelo
+        key={formulario.abierto ? (formulario.vuelo?.id ?? 'nuevo') : 'cerrado'}
         abierto={formulario.abierto}
         vuelo={formulario.abierto ? formulario.vuelo : null}
         alCerrar={() => setFormulario({ abierto: false })}

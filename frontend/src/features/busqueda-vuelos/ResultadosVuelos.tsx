@@ -22,6 +22,9 @@ interface PropsResultadosVuelos {
   alCambiarOrden: (orden: OrdenVuelos) => void
   alCambiarSentido: (sentido: SentidoOrden) => void
   alLimpiarFiltros: () => void
+  /** Vuelo cuya ruta se ve en el mapa. */
+  idActivo?: number
+  alActivar?: (vuelo: Vuelo) => void
 }
 
 function EsqueletoTarjeta() {
@@ -50,6 +53,8 @@ export function ResultadosVuelos({
   alCambiarOrden,
   alCambiarSentido,
   alLimpiarFiltros,
+  idActivo,
+  alActivar,
 }: PropsResultadosVuelos) {
   const ordenados = useMemo(() => ordenarVuelos(vuelos ?? [], orden, sentido), [vuelos, orden, sentido])
 
@@ -69,7 +74,7 @@ export function ResultadosVuelos({
     return (
       <div className="rounded-xl border border-dashed border-ink-300 bg-sheet/60" role="status">
         <EstadoVacio
-          titulo="No encontramos vuelos para tu búsqueda"
+          titulo="No se encontraron resultados para los filtros seleccionados"
           descripcion={
             hayFiltros
               ? 'Probá con otra fecha, otra categoría o quitá algunos filtros.'
@@ -103,7 +108,12 @@ export function ResultadosVuelos({
       <ol className={cn('flex flex-col gap-4 transition-opacity', actualizando && 'opacity-60')}>
         {ordenados.map((vuelo) => (
           <li key={vuelo.id}>
-            <TarjetaVuelo vuelo={vuelo} pasajeros={pasajeros} />
+            <TarjetaVuelo
+              vuelo={vuelo}
+              pasajeros={pasajeros}
+              activa={vuelo.id === idActivo}
+              alActivar={alActivar && (() => alActivar(vuelo))}
+            />
           </li>
         ))}
       </ol>

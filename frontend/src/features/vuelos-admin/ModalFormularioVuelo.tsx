@@ -22,8 +22,11 @@ import {
   type ClaseCabina,
   type DatosTarifaAdmin,
   type DivisaAdmin,
+  type TipoViaje,
   type VueloAdmin,
 } from './consultas'
+import { EditorTramos, SelectorTipoViaje } from './EditorTramos'
+import { tramosDesdeApi, tramosParaApi, tramoVacio, type TramoForm } from './tramosFormulario'
 import { inputLocalAIso, isoAInputLocal } from './formato'
 
 interface PropsModalFormularioVuelo {
@@ -119,6 +122,15 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
   const tarifasActivas = vuelo?.fares.filter((tarifa) => tarifa.is_active) ?? []
   const [tarifasIniciales, setTarifasIniciales] = useState<TarifaInicialForm[]>([])
   const [contadorTarifas, setContadorTarifas] = useState(1)
+  const [tipo, setTipo] = useState<TipoViaje>(vuelo?.trip_type ?? 'one_way')
+  const [tramos, setTramos] = useState<TramoForm[]>(() => tramosDesdeApi(vuelo?.legs ?? []))
+  const [origen, setOrigen] = useState(vuelo?.origin_code ?? '')
+  const [destino, setDestino] = useState(vuelo?.destination_code ?? '')
+
+  const cambiarTipo = (nuevo: TipoViaje) => {
+    setTipo(nuevo)
+    if (nuevo !== 'one_way' && tramos.length === 0) setTramos([tramoVacio(1, destino)])
+  }
 
   const cerrar = () => {
     guardar.reset()
@@ -176,6 +188,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           }))
         : undefined
 
+    const ciudadDe = (codigo: string) => destinos.find((d) => d.code === codigo)?.city ?? codigo
     const originCode = valores.origin_code.toUpperCase()
     const destinationCode = valores.destination_code.toUpperCase()
     const origenEncontrado = destinos.find((d) => d.code === originCode)
@@ -199,6 +212,8 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
         currency: divisaElegida,
         cancellation_policy: valores.cancellation_policy,
         notes: valores.notes,
+        trip_type: tipo,
+        legs: tramosParaApi(tipo, tramos, originCode, destinationCode, ciudadDe),
         ...(fares ? { fares } : {}),
       },
       {
@@ -265,7 +280,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           enviar(evento.currentTarget)
         }}
       >
-        <AlertaFormulario mensaje={errorTarifas ?? errorDeFormulario(guardar.error) ?? errores.fares} />
+        <AlertaFormulario mensaje={errorTarifas ?? errorDeFormulario(guardar.error) ?? errores.fares ?? errores.legs} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <CampoTexto
@@ -283,6 +298,15 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             error={errores.airline}
           />
         </div>
+
+        <SelectorTipoViaje tipo={tipo} alCambiar={cambiarTipo} />
+
+        {tipo !== 'one_way' && (
+          <p className="-mb-1 flex items-center gap-2 map-label text-route-600">
+            <span aria-hidden className="h-[3px] w-5 rounded-full bg-route-500" />
+            {tipo === 'round_trip' ? 'Ida' : 'Tramo 1'}
+          </p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -307,7 +331,8 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             <CampoSeleccion
               etiqueta="Origen"
               name="origin_code"
-              defaultValue={vuelo?.origin_code ?? ''}
+              value={origen}
+              onChange={(evento) => setOrigen(evento.target.value)}
               error={errores.origin_code ?? errores.origin_city}
             >
               <option value="" disabled>
@@ -344,7 +369,8 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             <CampoSeleccion
               etiqueta="Destino"
               name="destination_code"
-              defaultValue={vuelo?.destination_code ?? ''}
+              value={destino}
+              onChange={(evento) => setDestino(evento.target.value)}
               error={errores.destination_code ?? errores.destination_city}
             >
               <option value="" disabled>
@@ -411,6 +437,16 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
             ))}
           </CampoSeleccion>
         </div>
+
+        <EditorTramos
+          tipo={tipo}
+          tramos={tramos}
+          origen={origen}
+          destino={destino}
+          aeropuertos={destinos}
+          error={errores.legs}
+          alCambiar={setTramos}
+        />
 
         {esEdicion && tarifasActivas.length > 0 && (
           <div className="rounded-xl border border-ink-200 bg-paper/70 p-4">
@@ -507,7 +543,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
                 {tarifasIniciales.map((tarifa) => (
                   <div
                     key={tarifa.clave}
-                    className="grid items-end gap-3 rounded-lg border border-ink-200 bg-sheet p-3 sm:grid-cols-[1fr_7.5rem_7.5rem_5.5rem_1fr_auto]"
+                    className="grid items-end gap-3 rounded-lg border border-ink-200 bg-sheet p-3 sm:grid-cols-[minmax(12rem,1.4fr)_minmax(7rem,1fr)_minmax(9rem,1fr)]"
                   >
                     <CampoSeleccion
                       etiqueta="Clase"

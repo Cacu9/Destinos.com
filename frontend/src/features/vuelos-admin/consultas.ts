@@ -4,6 +4,33 @@ import { api } from '@/lib/api'
 
 export type ClaseCabina = 'economy' | 'premium_economy' | 'business' | 'first'
 export type DivisaAdmin = 'ARS' | 'USD'
+export type TipoViaje = 'one_way' | 'round_trip' | 'multi_city'
+
+export const ETIQUETAS_TIPO_VIAJE: Record<TipoViaje, string> = {
+  one_way: 'Solo ida',
+  round_trip: 'Ida y vuelta',
+  multi_city: 'Multidestino',
+}
+
+/** Tramo siguiente al primero de un itinerario (la vuelta o un destino más). */
+export interface TramoAdmin {
+  position?: number
+  flight_number: string
+  origin_city: string
+  origin_code: string
+  destination_city: string
+  destination_code: string
+  departure_at: string
+  arrival_at: string
+  duration_minutes?: number
+  stops: number
+}
+
+/** Tramo de una política de cancelación: cancelando con al menos esas horas de anticipación se retiene ese %. */
+export interface ReglaCancelacion {
+  hours_before: number
+  penalty_percent: number
+}
 
 export const ETIQUETAS_CLASE_CABINA: Record<ClaseCabina, string> = {
   economy: 'Económica',
@@ -45,11 +72,18 @@ export interface VueloAdmin {
   arrival_at: string
   duration_minutes: number
   stops: number
+  total_stops: number
+  trip_type: TipoViaje
   base_price_ars: string
   currency: DivisaAdmin
   currency_display?: string
   min_price_ars: string
   cancellation_policy: string
+  cancellation_summary: string
+  is_non_refundable: boolean
+  cancellation_rules: ReglaCancelacion[]
+  policy_updated_at: string | null
+  legs: TramoAdmin[]
   notes: string
   is_active: boolean
   created_at: string
@@ -80,6 +114,8 @@ export interface DatosVueloAdmin {
   currency: DivisaAdmin
   cancellation_policy: string
   notes: string
+  trip_type: TipoViaje
+  legs: TramoAdmin[]
   fares?: DatosTarifaAdmin[]
 }
 
@@ -212,5 +248,18 @@ export function useDarDeBajaTarifa() {
 export function useReactivarTarifa() {
   return useMutacionTarifa(({ id }: { id: number; flightId: number }) =>
     api<TarifaAdmin>(`${URL_TARIFAS}${id}/reactivate/`, { metodo: 'POST' }),
+  )
+}
+
+export function useGuardarPolitica() {
+  return useMutacionVuelos(
+    ({
+      flightId,
+      ...datos
+    }: {
+      flightId: number
+      is_non_refundable: boolean
+      cancellation_rules: ReglaCancelacion[]
+    }) => api<VueloAdmin>(`${URL_VUELOS}${flightId}/policy/`, { metodo: 'PUT', cuerpo: datos }),
   )
 }

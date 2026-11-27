@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -13,6 +13,12 @@ class ClaseCabina(models.TextChoices):
     FIRST = "first", "Primera Clase"
 
 
+class TipoViaje(models.TextChoices):
+    ONE_WAY = "one_way", "Solo ida"
+    ROUND_TRIP = "round_trip", "Ida y vuelta"
+    MULTI_CITY = "multi_city", "Multidestino"
+
+
 class Divisa(models.TextChoices):
     ARS = "ARS", "Pesos argentinos (ARS)"
     USD = "USD", "Dólares estadounidenses (USD)"
@@ -25,7 +31,9 @@ class VueloQuerySet(models.QuerySet):
         if solo_activos:
             tarifas = tarifas.filter(is_active=True)
             qs = qs.filter(is_active=True)
-        return qs.prefetch_related(Prefetch("fares", queryset=tarifas)).annotate(
+        return qs.prefetch_related(
+            Prefetch("fares", queryset=tarifas), "legs", "cancellation_rules"
+        ).annotate(
             min_price_ars=Coalesce(Min("fares__price_ars", filter=Q(fares__is_active=True)), F("base_price_ars"))
         )
 
@@ -42,6 +50,7 @@ class Vuelo(models.Model):
     departure_at = models.DateTimeField("fecha y hora de salida")
     arrival_at = models.DateTimeField("fecha y hora de llegada")
     stops = models.PositiveSmallIntegerField("escalas", default=0)
+    trip_type = models.CharField("tipo de viaje", max_length=12, choices=TipoViaje.choices, default=TipoViaje.ONE_WAY)
     base_price_ars = models.DecimalField(
         "precio base",
         max_digits=12,
@@ -50,6 +59,8 @@ class Vuelo(models.Model):
     )
     currency = models.CharField("divisa", max_length=3, choices=Divisa.choices, default=Divisa.ARS)
     cancellation_policy = models.TextField("política de cancelación", blank=True)
+    is_non_refundable = models.BooleanField("no reembolsable", default=False)
+    policy_updated_at = models.DateTimeField("política actualizada el", null=True, blank=True)
     notes = models.TextField("observaciones", blank=True)
     is_active = models.BooleanField("activo", default=True)
     created_at = models.DateTimeField("creado el", auto_now_add=True)
@@ -87,7 +98,73 @@ class Vuelo(models.Model):
 
     @property
     def duration_minutes(self) -> int:
+        """Minutos en vuelo del itinerario completo: el primer tramo más los tramos adicionales."""
+        primero = max(0, int((self.arrival_at - self.departure_at).total_seconds() // 60))
+        return primero + sum(tramo.duration_minutes for tramo in self.legs.all())
+
+    @property
+    def total_stops(self) -> int:
+        return self.stops + sum(tramo.stops for tramo in self.legs.all())
+
+
+class TramoVuelo(models.Model):
+    """Tramo adicional de un itinerario: la vuelta de un ida y vuelta o cada destino siguiente de un multidestino.
+
+    El primer tramo vive en los campos del propio vuelo (origen, destino, salida y llegada).
+    """
+
+    flight = models.ForeignKey(Vuelo, on_delete=models.CASCADE, related_name="legs", verbose_name="vuelo")
+    position = models.PositiveSmallIntegerField("orden")
+    flight_number = models.CharField("número de vuelo", max_length=20)
+    origin_city = models.CharField("ciudad de origen", max_length=100)
+    origin_code = models.CharField("código de origen", max_length=10)
+    destination_city = models.CharField("ciudad de destino", max_length=100)
+    destination_code = models.CharField("código de destino", max_length=10)
+    departure_at = models.DateTimeField("fecha y hora de salida")
+    arrival_at = models.DateTimeField("fecha y hora de llegada")
+    stops = models.PositiveSmallIntegerField("escalas", default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = "tramo de vuelo"
+        verbose_name_plural = "tramos de vuelo"
+        constraints = [
+            models.UniqueConstraint(fields=["flight", "position"], name="tramo_orden_unico"),
+            models.CheckConstraint(
+                condition=models.Q(arrival_at__gt=models.F("departure_at")), name="tramo_llegada_posterior"
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.flight_number = self.flight_number.strip().upper()
+        self.origin_code = self.origin_code.strip().upper()
+        self.destination_code = self.destination_code.strip().upper()
+        super().save(*args, **kwargs)
+
+    @property
+    def duration_minutes(self) -> int:
         return max(0, int((self.arrival_at - self.departure_at).total_seconds() // 60))
+
+
+class TramoPolitica(models.Model):
+    """Tramo de la política de cancelación (UC30): cancelando con al menos `hours_before` horas, se retiene `penalty_percent`."""
+
+    flight = models.ForeignKey(
+        Vuelo, on_delete=models.CASCADE, related_name="cancellation_rules", verbose_name="vuelo"
+    )
+    hours_before = models.PositiveIntegerField("horas antes de la salida")
+    penalty_percent = models.PositiveSmallIntegerField(
+        "penalización (%)", validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+
+    class Meta:
+        ordering = ["-hours_before", "id"]
+        verbose_name = "tramo de política de cancelación"
+        verbose_name_plural = "tramos de política de cancelación"
+        constraints = [
+            models.UniqueConstraint(fields=["flight", "hours_before"], name="tramo_politica_plazo_unico"),
+            models.CheckConstraint(condition=models.Q(penalty_percent__lte=100), name="tramo_politica_maximo_100"),
+        ]
 
 
 class TarifaVuelo(models.Model):
@@ -136,6 +213,8 @@ class Destino(models.Model):
     country = models.CharField("país", max_length=100)
     name = models.CharField("aeropuerto", max_length=120)
     code = models.CharField("código IATA", max_length=3, unique=True)
+    latitude = models.DecimalField("latitud", max_digits=8, decimal_places=4, null=True, blank=True)
+    longitude = models.DecimalField("longitud", max_digits=8, decimal_places=4, null=True, blank=True)
     is_active = models.BooleanField("activo", default=True)
 
     class Meta:

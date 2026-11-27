@@ -1,4 +1,6 @@
-﻿from django.core.validators import RegexValidator
+from decimal import Decimal
+
+from django.core.validators import RegexValidator
 from rest_framework import mixins, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -6,13 +8,14 @@ from rest_framework.response import Response
 from rest_framework.validators import UniqueValidator
 
 from accounts.permisos import EsAdminGeneralOCatalogo
+from catalog.aeropuertos import AEROPUERTOS
 from catalog.models import Destino
 
 
 class SerializadorDestinoPublico(serializers.ModelSerializer):
     class Meta:
         model = Destino
-        fields = ["city", "region", "country", "name", "code"]
+        fields = ["city", "region", "country", "name", "code", "latitude", "longitude"]
 
 
 class SerializadorDestinoAdmin(SerializadorDestinoPublico):
@@ -38,6 +41,16 @@ class SerializadorDestinoAdmin(SerializadorDestinoPublico):
         for campo in ("city", "region", "country", "name"):
             if campo in attrs and not attrs[campo].strip():
                 raise serializers.ValidationError({campo: "Este campo es obligatorio."})
+        latitud, longitud = attrs.get("latitude"), attrs.get("longitude")
+        if latitud is not None and not -90 <= latitud <= 90:
+            raise serializers.ValidationError({"latitude": "La latitud va de -90 a 90."})
+        if longitud is not None and not -180 <= longitud <= 180:
+            raise serializers.ValidationError({"longitude": "La longitud va de -180 a 180."})
+        # Si no se cargan coordenadas y el aeropuerto es conocido, se ubica solo en el mapa.
+        conocido = AEROPUERTOS.get(attrs.get("code") or (self.instance.code if self.instance else ""))
+        if conocido and latitud is None and longitud is None and not (self.instance and self.instance.latitude):
+            attrs["latitude"] = Decimal(str(conocido[4]))
+            attrs["longitude"] = Decimal(str(conocido[5]))
         return attrs
 
 

@@ -12,6 +12,9 @@ export interface Aeropuerto {
   name: string
   city: string
   country: string
+  /** Coordenadas para ubicarlo en el mapa (la API las manda como texto decimal). */
+  latitude?: string | number | null
+  longitude?: string | number | null
 }
 
 export interface Aerolinea {
@@ -62,6 +65,9 @@ export interface Vuelo {
   currency: Divisa
   seats_available: number
   cancellation_summary: string
+  /** Tramos de la política de cancelación (UC30), de mayor a menor anticipación. */
+  cancellation_rules?: { hours_before: number; penalty_percent: number }[]
+  non_refundable?: boolean
 }
 
 /** Todos los filtros son opcionales: sin filtros se listan todos los vuelos disponibles. */

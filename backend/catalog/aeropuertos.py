@@ -1,0 +1,32 @@
+"""Aeropuertos de referencia con sus coordenadas, para cargar destinos de demostración y ubicarlos en el mapa."""
+
+# código: (ciudad, provincia o estado, país, aeropuerto, latitud, longitud)
+AEROPUERTOS = {
+    "AEP": ("Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Argentina", "Aeroparque Jorge Newbery", -34.5592, -58.4156),
+    "EZE": ("Buenos Aires", "Buenos Aires", "Argentina", "Ministro Pistarini (Ezeiza)", -34.8222, -58.5358),
+    "COR": ("Córdoba", "Córdoba", "Argentina", "Ingeniero Taravella", -31.3236, -64.2080),
+    "MDZ": ("Mendoza", "Mendoza", "Argentina", "El Plumerillo", -32.8317, -68.7929),
+    "BRC": ("Bariloche", "Río Negro", "Argentina", "Teniente Candelaria", -41.1512, -71.1578),
+    "IGR": ("Puerto Iguazú", "Misiones", "Argentina", "Cataratas del Iguazú", -25.7373, -54.4734),
+    "USH": ("Ushuaia", "Tierra del Fuego", "Argentina", "Malvinas Argentinas", -54.8433, -68.2958),
+    "SLA": ("Salta", "Salta", "Argentina", "Martín Miguel de Güemes", -24.8560, -65.4862),
+    "FTE": ("El Calafate", "Santa Cruz", "Argentina", "Comandante Armando Tola", -50.2803, -72.0531),
+    "MDQ": ("Mar del Plata", "Buenos Aires", "Argentina", "Astor Piazzolla", -37.9342, -57.5733),
+    "NQN": ("Neuquén", "Neuquén", "Argentina", "Presidente Perón", -38.9490, -68.1557),
+    "GRU": ("San Pablo", "San Pablo", "Brasil", "Guarulhos", -23.4356, -46.4731),
+    "GIG": ("Río de Janeiro", "Río de Janeiro", "Brasil", "Galeão", -22.8090, -43.2506),
+    "FLN": ("Florianópolis", "Santa Catarina", "Brasil", "Hercílio Luz", -27.6703, -48.5525),
+    "MVD": ("Montevideo", "Canelones", "Uruguay", "Carrasco", -34.8384, -56.0308),
+    "SCL": ("Santiago", "Región Metropolitana", "Chile", "Arturo Merino Benítez", -33.3930, -70.7858),
+    "LIM": ("Lima", "Callao", "Perú", "Jorge Chávez", -12.0219, -77.1143),
+    "BOG": ("Bogotá", "Cundinamarca", "Colombia", "El Dorado", 4.7016, -74.1469),
+    "CUN": ("Cancún", "Quintana Roo", "México", "Internacional de Cancún", 21.0365, -86.8771),
+    "PUJ": ("Punta Cana", "La Altagracia", "República Dominicana", "Internacional de Punta Cana", 18.5674, -68.3634),
+    "MIA": ("Miami", "Florida", "Estados Unidos", "Internacional de Miami", 25.7959, -80.2870),
+    "JFK": ("Nueva York", "Nueva York", "Estados Unidos", "John F. Kennedy", 40.6413, -73.7781),
+    "MAD": ("Madrid", "Comunidad de Madrid", "España", "Adolfo Suárez Madrid-Barajas", 40.4983, -3.5676),
+    "BCN": ("Barcelona", "Cataluña", "España", "Josep Tarradellas Barcelona-El Prat", 41.2974, 2.0833),
+    "FCO": ("Roma", "Lacio", "Italia", "Leonardo da Vinci (Fiumicino)", 41.8003, 12.2389),
+    "CDG": ("París", "Isla de Francia", "Francia", "Charles de Gaulle", 49.0097, 2.5479),
+    "LHR": ("Londres", "Inglaterra", "Reino Unido", "Heathrow", 51.4700, -0.4543),
+}

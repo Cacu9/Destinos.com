@@ -1,7 +1,7 @@
 from django.db.models import Exists, OuterRef, Q
 from django_filters import rest_framework as filters
 
-from .models import ClaseCabina, TarifaVuelo, Vuelo
+from .models import ClaseCabina, TarifaVuelo, TipoViaje, TramoVuelo, Vuelo
 
 
 class FiltroVuelos(filters.FilterSet):
@@ -18,12 +18,13 @@ class FiltroVuelos(filters.FilterSet):
     min_price = filters.NumberFilter(method="filtrar_precio_minimo")
     max_price = filters.NumberFilter(method="filtrar_precio_maximo")
     min_seats = filters.NumberFilter(method="filtrar_asientos_minimos")
+    trip_type = filters.ChoiceFilter(choices=TipoViaje.choices)
 
     solo_tarifas_activas = True
 
     class Meta:
         model = Vuelo
-        fields = ["origin", "destination", "airline", "departure_date", "departure_from", "departure_to"]
+        fields = ["origin", "destination", "airline", "departure_date", "departure_from", "departure_to", "trip_type"]
 
     def _tarifas_vuelo(self):
         qs = TarifaVuelo.objects.filter(flight=OuterRef("pk"))
@@ -31,11 +32,22 @@ class FiltroVuelos(filters.FilterSet):
             qs = qs.filter(is_active=True)
         return qs
 
+    @staticmethod
+    def _llega_en_tramo(value):
+        """En un multidestino, cualquiera de sus destinos cuenta como destino del viaje."""
+        return Q(trip_type=TipoViaje.MULTI_CITY) & Exists(
+            TramoVuelo.objects.filter(flight=OuterRef("pk")).filter(
+                Q(destination_code__icontains=value) | Q(destination_city__icontains=value)
+            )
+        )
+
     def filtrar_origen(self, queryset, name, value):
         return queryset.filter(Q(origin_code__icontains=value) | Q(origin_city__icontains=value))
 
     def filtrar_destino(self, queryset, name, value):
-        return queryset.filter(Q(destination_code__icontains=value) | Q(destination_city__icontains=value))
+        return queryset.filter(
+            Q(destination_code__icontains=value) | Q(destination_city__icontains=value) | self._llega_en_tramo(value)
+        )
 
     def filtrar_directos(self, queryset, name, value):
         return queryset.filter(stops=0) if value else queryset
@@ -58,7 +70,11 @@ class FiltroVuelosPublicos(FiltroVuelos):
         return queryset.filter(Q(origin_code__icontains=value) | Q(public_origin_city__icontains=value))
 
     def filtrar_destino(self, queryset, name, value):
-        return queryset.filter(Q(destination_code__icontains=value) | Q(public_destination_city__icontains=value))
+        return queryset.filter(
+            Q(destination_code__icontains=value)
+            | Q(public_destination_city__icontains=value)
+            | self._llega_en_tramo(value)
+        )
 
 
 class FiltroVuelosAdmin(FiltroVuelos):

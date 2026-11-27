@@ -1,8 +1,9 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 
 from rest_framework import serializers
 
-from catalog.models import TarifaVuelo, Vuelo
+from catalog.models import TarifaVuelo, TramoPolitica, TramoVuelo, Vuelo
+from catalog.politicas import resumen_politica
 
 
 class SerializadorTarifaPublica(serializers.ModelSerializer):
@@ -30,6 +31,47 @@ class SerializadorTarifaDetalle(SerializadorTarifaPublica):
         read_only_fields = fields
 
 
+class SerializadorTramoPublico(serializers.ModelSerializer):
+    duration_minutes = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = TramoVuelo
+        fields = [
+            "position",
+            "flight_number",
+            "origin_city",
+            "origin_code",
+            "destination_city",
+            "destination_code",
+            "departure_at",
+            "arrival_at",
+            "duration_minutes",
+            "stops",
+        ]
+        read_only_fields = fields
+
+
+class SerializadorTramoPoliticaPublico(serializers.ModelSerializer):
+    class Meta:
+        model = TramoPolitica
+        fields = ["hours_before", "penalty_percent"]
+        read_only_fields = fields
+
+
+def resumen_cancelacion(vuelo: Vuelo) -> str:
+    """La política por tramos si está configurada; si no, el texto libre o un resumen según las tarifas."""
+    reglas = [(regla.hours_before, regla.penalty_percent) for regla in vuelo.cancellation_rules.all()]
+    configurada = resumen_politica(vuelo.is_non_refundable, reglas)
+    if configurada:
+        return configurada
+    politica = " ".join(vuelo.cancellation_policy.split())
+    if politica:
+        return politica if len(politica) <= 140 else f"{politica[:137].rstrip()}..."
+    if any(tarifa.is_active and tarifa.is_refundable for tarifa in vuelo.fares.all()):
+        return "Permite cancelación con reembolso según condiciones de la tarifa."
+    return "Tarifa sin reembolso. Consultá condiciones de cambio antes de confirmar."
+
+
 class SerializadorVueloCatalogo(serializers.ModelSerializer):
     """Vista resumida del catálogo público de vuelos y sus tarifas activas."""
 
@@ -39,7 +81,10 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
     min_price_ars = serializers.SerializerMethodField()
     currency_display = serializers.CharField(source="get_currency_display", read_only=True)
     cancellation_summary = serializers.SerializerMethodField()
+    total_stops = serializers.IntegerField(read_only=True)
     fares = SerializadorTarifaPublica(many=True, read_only=True)
+    legs = SerializadorTramoPublico(many=True, read_only=True)
+    cancellation_rules = SerializadorTramoPoliticaPublico(many=True, read_only=True)
 
     class Meta:
         model = Vuelo
@@ -55,12 +100,17 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
             "arrival_at",
             "duration_minutes",
             "stops",
+            "total_stops",
+            "trip_type",
             "base_price_ars",
             "currency",
             "currency_display",
             "min_price_ars",
             "cancellation_summary",
+            "is_non_refundable",
+            "cancellation_rules",
             "fares",
+            "legs",
         ]
         read_only_fields = fields
 
@@ -72,12 +122,7 @@ class SerializadorVueloCatalogo(serializers.ModelSerializer):
         return min(precios) if precios else obj.base_price_ars
 
     def get_cancellation_summary(self, obj: Vuelo) -> str:
-        politica = " ".join(obj.cancellation_policy.split())
-        if politica:
-            return politica if len(politica) <= 140 else f"{politica[:137].rstrip()}..."
-        if any(tarifa.is_active and tarifa.is_refundable for tarifa in obj.fares.all()):
-            return "Permite cancelación con reembolso según condiciones de la tarifa."
-        return "Tarifa sin reembolso. Consultá condiciones de cambio antes de confirmar."
+        return resumen_cancelacion(obj)
 
 
 class SerializadorVueloDetalle(SerializadorVueloCatalogo):
