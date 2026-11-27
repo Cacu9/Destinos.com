@@ -35,6 +35,9 @@ class PruebasDestinos(APITestCase):
     def test_permisos_y_validacion(self):
         self.assertEqual(self.client.get(self.url).status_code, 401)
         self.assertEqual(self.client.get("/api/airports/").status_code, 200)
+        admin_general = User.objects.create_user(email="general@destinos.com", password="Prueba123!", role=Rol.ADMINISTRADOR, admin_area=AreaAdmin.GENERAL)
+        self.client.force_authenticate(admin_general)
+        self.assertEqual(self.client.get(self.url).status_code, 200)
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.post(self.url, {**self.datos, "region": ""}).status_code, 400)
         self.assertEqual(self.client.post(self.url, {**self.datos, "city": "   "}).status_code, 400)

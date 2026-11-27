@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.validators import UniqueValidator
 
-from accounts.permisos import EsAdminCatalogo
+from accounts.permisos import EsAdminGeneralOCatalogo
 from catalog.models import Destino
 
 
@@ -50,7 +50,7 @@ class VistaDestinosPublicos(mixins.ListModelMixin, viewsets.GenericViewSet):
 class VistaDestinosAdmin(viewsets.ModelViewSet):
     queryset = Destino.objects.all()
     serializer_class = SerializadorDestinoAdmin
-    permission_classes = [EsAdminCatalogo]
+    permission_classes = [EsAdminGeneralOCatalogo]
 
     def perform_destroy(self, instance):
         instance.is_active = False

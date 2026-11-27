@@ -4,6 +4,8 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { Toaster } from 'sonner'
 
 import { EstructuraPublica } from '@/components/estructura/EstructuraPublica'
+import { PaginaAlojamientos } from '@/features/alojamientos/PaginaAlojamientos'
+import { PaginaAlojamientosAdmin } from '@/features/alojamientos-admin/PaginaAlojamientosAdmin'
 import { PaginaBusquedaVuelos } from '@/features/busqueda-vuelos/PaginaBusquedaVuelos'
 import { PaginaCuentas } from '@/features/cuentas-admin/PaginaCuentas'
 import { PaginaDestinosAdmin } from '@/features/destinos-admin/PaginaDestinosAdmin'
@@ -36,6 +38,7 @@ export function Aplicacion() {
             <Route element={<EstructuraPublica />}>
               <Route index element={<PaginaInicio />} />
               <Route path="vuelos" element={<PaginaBusquedaVuelos />} />
+              <Route path="alojamientos" element={<PaginaAlojamientos />} />
               <Route path="*" element={<PaginaNoEncontrada />} />
             </Route>
             <Route path="registro" element={<PaginaRegistro />} />
@@ -60,7 +63,7 @@ export function Aplicacion() {
               <Route
                 path="destinos"
                 element={
-                  <RequiereArea area="catalog">
+                  <RequiereArea areas={['general', 'catalog']}>
                     <PaginaDestinosAdmin />
                   </RequiereArea>
                 }
@@ -70,6 +73,14 @@ export function Aplicacion() {
                 element={
                   <RequiereArea areas={['general', 'catalog']}>
                     <PaginaVuelosAdmin />
+                  </RequiereArea>
+                }
+              />
+              <Route
+                path="alojamientos"
+                element={
+                  <RequiereArea areas={['general', 'catalog']}>
+                    <PaginaAlojamientosAdmin />
                   </RequiereArea>
                 }
               />

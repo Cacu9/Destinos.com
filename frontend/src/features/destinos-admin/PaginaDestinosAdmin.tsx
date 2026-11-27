@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { AlertaFormulario } from '@/components/ui/AlertaFormulario'
 import { Boton } from '@/components/ui/Boton'
-import { CampoTexto } from '@/components/ui/Campo'
+import { CampoSeleccion, CampoTexto } from '@/components/ui/Campo'
 import { CampoBusqueda } from '@/components/ui/CampoBusqueda'
 import { DialogoConfirmacion } from '@/components/ui/DialogoConfirmacion'
 import { EstadoVacio } from '@/components/ui/EstadoVacio'
@@ -13,6 +13,7 @@ import { Insignia } from '@/components/ui/Insignia'
 import { Modal } from '@/components/ui/Modal'
 import { BotonIcono, Tabla, Td, Th } from '@/components/ui/Tabla'
 import { claveAeropuertos } from '@/features/busqueda-vuelos/consultas'
+import { PAIS_LOCAL } from '@/features/busqueda-vuelos/tipos'
 import { EncabezadoPaginaPanel } from '@/features/sesion/EncabezadoPaginaPanel'
 import { api, errorDeFormulario, erroresDeCampos } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -31,15 +32,23 @@ const CAMPOS = [
 
 type Campo = (typeof CAMPOS)[number][0]
 type FiltroEstado = 'todos' | 'activos' | 'inactivos'
+type FiltroAlcance = 'todos' | 'local' | 'exterior'
 type Destino = Record<Campo, string> & { id: number; is_active: boolean }
 type Cambio = { id?: number; datos: Record<Campo, string> } | { baja: number } | { reactivar: number }
+
+function esLocal(pais: string): boolean {
+  return pais.trim().toLowerCase() === PAIS_LOCAL.toLowerCase()
+}
 
 export function PaginaDestinosAdmin() {
   const cliente = useQueryClient()
   const lista = useQuery({ queryKey: claveDestinos, queryFn: () => api<Destino[]>(URL_DESTINOS) })
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('todos')
+  const [alcance, setAlcance] = useState<FiltroAlcance>('todos')
   const [formulario, setFormulario] = useState<Destino | 'nuevo' | null>(null)
+  const [alcanceForm, setAlcanceForm] = useState<'local' | 'exterior'>('local')
+  const [paisForm, setPaisForm] = useState(PAIS_LOCAL)
   const [baja, setBaja] = useState<Destino | null>(null)
   const [erroresLocales, setErroresLocales] = useState<Partial<Record<Campo, string>>>({})
   const edicion = formulario && formulario !== 'nuevo' ? formulario : null
@@ -74,23 +83,39 @@ export function PaginaDestinosAdmin() {
     return (lista.data ?? []).filter((destino) => {
       if (estado === 'activos' && !destino.is_active) return false
       if (estado === 'inactivos' && destino.is_active) return false
+      const local = esLocal(destino.country)
+      if (alcance === 'local' && !local) return false
+      if (alcance === 'exterior' && local) return false
       if (!consulta) return true
       return [destino.city, destino.region, destino.country, destino.name, destino.code].some((campo) =>
         campo.toLowerCase().includes(consulta),
       )
     })
-  }, [lista.data, busqueda, estado])
+  }, [lista.data, busqueda, estado, alcance])
 
   const abrirNuevo = () => {
     guardar.reset()
     setErroresLocales({})
+    setAlcanceForm('local')
+    setPaisForm(PAIS_LOCAL)
     setFormulario('nuevo')
   }
 
   const abrirEditar = (destino: Destino) => {
     guardar.reset()
     setErroresLocales({})
+    setAlcanceForm(esLocal(destino.country) ? 'local' : 'exterior')
+    setPaisForm(destino.country)
     setFormulario(destino)
+  }
+
+  const cambiarAlcanceForm = (nuevo: 'local' | 'exterior') => {
+    setAlcanceForm(nuevo)
+    if (nuevo === 'local') {
+      setPaisForm(PAIS_LOCAL)
+    } else if (esLocal(paisForm)) {
+      setPaisForm('')
+    }
   }
 
   const enviar = (evento: FormEvent<HTMLFormElement>) => {
@@ -122,7 +147,7 @@ export function PaginaDestinosAdmin() {
     <>
       <EncabezadoPaginaPanel
         titulo="Destinos"
-        descripcion="Dá de alta, modificá o dá de baja aeropuertos y ciudades. Los cambios se reflejan en el catálogo público."
+        descripcion="Dá de alta, modificá o dá de baja ciudades y aeropuertos locales o del exterior. Se reflejan al crear vuelos y en la web."
         accion={
           <Boton onClick={abrirNuevo}>
             <Plus className="size-4" /> Nuevo destino
@@ -131,14 +156,38 @@ export function PaginaDestinosAdmin() {
       />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <CampoBusqueda
-          placeholder="Buscar por ciudad, país, aeropuerto o IATA..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          aria-label="Buscar destinos"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <CampoBusqueda
+            placeholder="Buscar por ciudad, país, aeropuerto o IATA..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            aria-label="Buscar destinos"
+          />
 
-        <div className="inline-flex rounded-lg bg-ink-100 p-1">
+          <div className="inline-flex rounded-lg bg-ink-100 p-1" role="group" aria-label="Filtrar por alcance">
+            {(
+              [
+                ['todos', 'Todos'],
+                ['local', 'Local'],
+                ['exterior', 'Exterior'],
+              ] as const
+            ).map(([valor, etiqueta]) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setAlcance(valor)}
+                className={cn(
+                  'cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                  alcance === valor ? 'bg-sheet text-ink-900 shadow-sheet' : 'text-ink-500 hover:text-ink-900',
+                )}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="inline-flex rounded-lg bg-ink-100 p-1" role="group" aria-label="Filtrar por estado">
           {(
             [
               ['todos', 'Todos'],
@@ -168,7 +217,7 @@ export function PaginaDestinosAdmin() {
           <EstadoVacio
             titulo="No hay destinos para mostrar"
             descripcion={
-              busqueda || estado !== 'todos'
+              busqueda || estado !== 'todos' || alcance !== 'todos'
                 ? 'Probá limpiando los filtros o cargá un nuevo destino.'
                 : 'Todavía no hay destinos cargados.'
             }
@@ -183,76 +232,82 @@ export function PaginaDestinosAdmin() {
         <Tabla>
           <thead>
             <tr>
-              <Th>Ciudad y región</Th>
-              <Th>País</Th>
-              <Th>Aeropuerto</Th>
+              <Th>Ciudad</Th>
+              <Th>Código y alcance</Th>
+              <Th>Aeropuerto y país</Th>
               <Th>Estado</Th>
               <Th className="text-right">Acciones</Th>
             </tr>
           </thead>
           <tbody>
-            {destinosFiltrados.map((destino) => (
-              <tr
-                key={destino.id}
-                className={cn('transition-colors hover:bg-paper', !destino.is_active && 'text-ink-500')}
-              >
-                <Td>
-                  <p className={cn('font-semibold', destino.is_active && 'text-ink-900')}>{destino.city}</p>
-                  <p className="text-xs text-ink-500">{destino.region}</p>
-                </Td>
-                <Td>{destino.country}</Td>
-                <Td>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Insignia tono={destino.is_active ? 'info' : 'neutral'}>{destino.code}</Insignia>
-                    <span>{destino.name}</span>
-                  </div>
-                </Td>
-                <Td>
-                  <span className="flex items-center gap-2 font-medium">
-                    <span
-                      aria-hidden
-                      className={cn('size-2 rounded-full', destino.is_active ? 'bg-fare-flexible' : 'bg-ink-300')}
-                    />
-                    {destino.is_active ? 'Activo' : 'Dado de baja'}
-                  </span>
-                </Td>
-                <Td>
-                  <div className="flex justify-end gap-1">
-                    {destino.is_active ? (
-                      <>
+            {destinosFiltrados.map((destino) => {
+              const local = esLocal(destino.country)
+              return (
+                <tr
+                  key={destino.id}
+                  className={cn('transition-colors hover:bg-paper', !destino.is_active && 'text-ink-500')}
+                >
+                  <Td>
+                    <p className={cn('font-semibold', destino.is_active && 'text-ink-900')}>{destino.city}</p>
+                    <p className="text-xs text-ink-500">{destino.region}</p>
+                  </Td>
+                  <Td>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Insignia tono={destino.is_active ? 'info' : 'neutral'}>{destino.code}</Insignia>
+                      <Insignia tono={local ? 'positive' : 'warning'}>{local ? 'Local' : 'Exterior'}</Insignia>
+                    </div>
+                  </Td>
+                  <Td>
+                    <p className={cn('font-medium', destino.is_active && 'text-ink-900')}>{destino.name}</p>
+                    <p className="text-xs text-ink-500">{destino.country}</p>
+                  </Td>
+                  <Td>
+                    <span className="flex items-center gap-2 font-medium">
+                      <span
+                        aria-hidden
+                        className={cn('size-2 rounded-full', destino.is_active ? 'bg-fare-flexible' : 'bg-ink-300')}
+                      />
+                      {destino.is_active ? 'Activo' : 'Dado de baja'}
+                    </span>
+                  </Td>
+                  <Td>
+                    <div className="flex justify-end gap-1">
+                      {destino.is_active ? (
+                        <>
+                          <BotonIcono
+                            aria-label="Editar destino"
+                            title="Editar destino"
+                            onClick={() => abrirEditar(destino)}
+                          >
+                            <Pencil className="size-4" />
+                          </BotonIcono>
+                          <BotonIcono
+                            aria-label="Dar de baja destino"
+                            title="Dar de baja destino"
+                            className="hover:bg-route-50 hover:text-route-600"
+                            onClick={() => {
+                              guardar.reset()
+                              setBaja(destino)
+                            }}
+                          >
+                            <PowerOff className="size-4" />
+                          </BotonIcono>
+                        </>
+                      ) : (
                         <BotonIcono
-                          aria-label="Editar destino"
-                          title="Editar destino"
-                          onClick={() => abrirEditar(destino)}
+                          aria-label="Reactivar destino"
+                          title="Reactivar destino"
+                          className="hover:bg-home/60 hover:text-ink-900"
+                          onClick={() => guardar.mutate({ reactivar: destino.id })}
                         >
-                          <Pencil className="size-4" />
+                          <RotateCcw className="size-4" />
                         </BotonIcono>
-                        <BotonIcono
-                          aria-label="Dar de baja destino"
-                          title="Dar de baja destino"
-                          className="hover:bg-route-50 hover:text-route-600"
-                          onClick={() => {
-                            guardar.reset()
-                            setBaja(destino)
-                          }}
-                        >
-                          <PowerOff className="size-4" />
-                        </BotonIcono>
-                      </>
-                    ) : (
-                      <BotonIcono
-                        aria-label="Reactivar destino"
-                        title="Reactivar destino"
-                        className="hover:bg-home/60 hover:text-ink-900"
-                        onClick={() => guardar.mutate({ reactivar: destino.id })}
-                      >
-                        <RotateCcw className="size-4" />
-                      </BotonIcono>
-                    )}
-                  </div>
-                </Td>
-              </tr>
-            ))}
+                      )}
+                    </div>
+                  </Td>
+                </tr>
+              )
+            })}
           </tbody>
         </Tabla>
       )}
@@ -260,7 +315,7 @@ export function PaginaDestinosAdmin() {
       <Modal
         abierto={formulario !== null}
         titulo={edicion ? `Editar destino (${edicion.code})` : 'Nuevo destino'}
-        descripcion="Todos los datos son obligatorios para mostrar el destino en las búsquedas de vuelos."
+        descripcion="Todos los datos son obligatorios para mostrar el destino en los filtros de vuelos."
         alCerrar={() => {
           if (!guardar.isPending) setFormulario(null)
         }}
@@ -268,20 +323,66 @@ export function PaginaDestinosAdmin() {
         {formulario && (
           <form key={edicion?.id ?? 'nuevo'} onSubmit={enviar} noValidate className="grid gap-4">
             <AlertaFormulario mensaje={errorDeFormulario(guardar.error)} />
-            {CAMPOS.map(([campo, etiqueta, maxLength]) => (
+
+            <CampoSeleccion
+              etiqueta="Alcance"
+              value={alcanceForm}
+              onChange={(e) => cambiarAlcanceForm(e.target.value as 'local' | 'exterior')}
+            >
+              <option value="local">Local (Argentina)</option>
+              <option value="exterior">Exterior</option>
+            </CampoSeleccion>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <CampoTexto
-                key={campo}
-                name={campo}
-                etiqueta={etiqueta}
-                maxLength={maxLength}
-                defaultValue={edicion?.[campo]}
-                readOnly={campo === 'code' && Boolean(edicion)}
-                ayuda={
-                  campo === 'code' && edicion ? 'El código IATA no puede cambiarse en destinos existentes.' : undefined
-                }
-                error={errores[campo]}
+                name="city"
+                etiqueta="Ciudad"
+                maxLength={100}
+                defaultValue={edicion?.city}
+                error={errores.city}
               />
-            ))}
+              <CampoTexto
+                name="region"
+                etiqueta="Provincia o estado"
+                maxLength={100}
+                defaultValue={edicion?.region}
+                error={errores.region}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CampoTexto
+                name="country"
+                etiqueta="País"
+                maxLength={100}
+                value={paisForm}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  setPaisForm(valor)
+                  setAlcanceForm(esLocal(valor) ? 'local' : 'exterior')
+                }}
+                error={errores.country}
+              />
+              <CampoTexto
+                name="code"
+                etiqueta="Código IATA"
+                maxLength={3}
+                placeholder="ROS"
+                defaultValue={edicion?.code}
+                readOnly={Boolean(edicion)}
+                ayuda={edicion ? 'El código IATA no puede cambiarse en destinos existentes.' : undefined}
+                error={errores.code}
+              />
+            </div>
+
+            <CampoTexto
+              name="name"
+              etiqueta="Aeropuerto"
+              maxLength={120}
+              defaultValue={edicion?.name}
+              error={errores.name}
+            />
+
             <div className="mt-2 flex justify-end gap-3">
               <Boton
                 variante="secondary"

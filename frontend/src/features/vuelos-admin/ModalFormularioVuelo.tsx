@@ -7,14 +7,17 @@ import { Boton } from '@/components/ui/Boton'
 import { CampoSeleccion, CampoTexto } from '@/components/ui/Campo'
 import { Modal } from '@/components/ui/Modal'
 import { BotonIcono } from '@/components/ui/Tabla'
+import { useAeropuertos } from '@/features/busqueda-vuelos/consultas'
+import { PAIS_LOCAL, type Aeropuerto } from '@/features/busqueda-vuelos/tipos'
 import { errorDeFormulario, erroresDeCampos } from '@/lib/api'
+import { cn } from '@/lib/cn'
 import { entradasDe } from '@/lib/entradas'
 import { leerFormulario } from '@/lib/formularios'
 
 import {
   ETIQUETAS_CLASE_CABINA,
   ETIQUETAS_DIVISA_ADMIN,
-  useActualizarPrecioDivisa,
+  useGuardarTarifa,
   useGuardarVuelo,
   type ClaseCabina,
   type DatosTarifaAdmin,
@@ -42,9 +45,7 @@ interface TarifaInicialForm {
 type CampoVueloForm =
   | 'flight_number'
   | 'airline'
-  | 'origin_city'
   | 'origin_code'
-  | 'destination_city'
   | 'destination_code'
   | 'departure_at'
   | 'arrival_at'
@@ -54,11 +55,65 @@ type CampoVueloForm =
   | 'cancellation_policy'
   | 'notes'
 
+type FiltroAlcance = 'todos' | 'local' | 'exterior'
+
 const CLASES_ORDEN: ClaseCabina[] = ['economy', 'premium_economy', 'business', 'first']
+
+function esDestinoLocal(aeropuerto: Aeropuerto): boolean {
+  return aeropuerto.country.trim().toLowerCase() === PAIS_LOCAL.toLowerCase()
+}
+
+function OpcionesDestinos({
+  destinos,
+  alcance,
+  codigoActual,
+  ciudadActual,
+}: {
+  destinos: Aeropuerto[]
+  alcance: FiltroAlcance
+  codigoActual?: string
+  ciudadActual?: string
+}) {
+  const locales = destinos.filter(esDestinoLocal)
+  const exteriores = destinos.filter((d) => !esDestinoLocal(d))
+  const existeActual = Boolean(codigoActual && destinos.some((d) => d.code === codigoActual))
+
+  return (
+    <>
+      {codigoActual && !existeActual && (
+        <option value={codigoActual}>
+          {ciudadActual || codigoActual} ({codigoActual}) · Dado de baja
+        </option>
+      )}
+      {alcance !== 'exterior' && locales.length > 0 && (
+        <optgroup label="Local (Argentina)">
+          {locales.map((d) => (
+            <option key={d.code} value={d.code}>
+              {d.city} ({d.code}) · Local
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {alcance !== 'local' && exteriores.length > 0 && (
+        <optgroup label="Exterior">
+          {exteriores.map((d) => (
+            <option key={d.code} value={d.code}>
+              {d.city} ({d.code}) · Exterior ({d.country})
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </>
+  )
+}
 
 export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFormularioVuelo) {
   const guardar = useGuardarVuelo()
-  const actualizarPrecioDivisa = useActualizarPrecioDivisa()
+  const guardarTarifa = useGuardarTarifa()
+  const { data: destinos = [] } = useAeropuertos()
+  const [errorTarifas, setErrorTarifas] = useState<string>()
+  const [alcanceOrigen, setAlcanceOrigen] = useState<FiltroAlcance>('todos')
+  const [alcanceDestino, setAlcanceDestino] = useState<FiltroAlcance>('todos')
   const errores = erroresDeCampos(guardar.error)
   const esEdicion = vuelo !== null
   const tarifasActivas = vuelo?.fares.filter((tarifa) => tarifa.is_active) ?? []
@@ -67,7 +122,10 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
 
   const cerrar = () => {
     guardar.reset()
-    actualizarPrecioDivisa.reset()
+    guardarTarifa.reset()
+    setErrorTarifas(undefined)
+    setAlcanceOrigen('todos')
+    setAlcanceDestino('todos')
     setTarifasIniciales([])
     alCerrar()
   }
@@ -102,8 +160,9 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
   }
 
   const enviar = (formulario: HTMLFormElement) => {
+    setErrorTarifas(undefined)
+    const formData = new FormData(formulario)
     const valores = leerFormulario<CampoVueloForm>(formulario)
-    const sincronizarTarifa = new FormData(formulario).has('sincronizar_tarifa')
     const divisaElegida = (valores.currency as DivisaAdmin) || 'ARS'
     const fares: DatosTarifaAdmin[] | undefined =
       !esEdicion && tarifasIniciales.length > 0
@@ -117,15 +176,22 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           }))
         : undefined
 
+    const originCode = valores.origin_code.toUpperCase()
+    const destinationCode = valores.destination_code.toUpperCase()
+    const origenEncontrado = destinos.find((d) => d.code === originCode)
+    const destinoEncontrado = destinos.find((d) => d.code === destinationCode)
+
     guardar.mutate(
       {
         id: vuelo?.id,
         flight_number: valores.flight_number.toUpperCase(),
         airline: valores.airline,
-        origin_city: valores.origin_city,
-        origin_code: valores.origin_code.toUpperCase(),
-        destination_city: valores.destination_city,
-        destination_code: valores.destination_code.toUpperCase(),
+        origin_city: origenEncontrado?.city ?? (vuelo?.origin_code === originCode ? vuelo.origin_city : originCode),
+        origin_code: originCode,
+        destination_city:
+          destinoEncontrado?.city ??
+          (vuelo?.destination_code === destinationCode ? vuelo.destination_city : destinationCode),
+        destination_code: destinationCode,
         departure_at: inputLocalAIso(valores.departure_at),
         arrival_at: inputLocalAIso(valores.arrival_at),
         stops: Number(valores.stops || 0),
@@ -137,18 +203,39 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
       },
       {
         onSuccess: async () => {
-          if (esEdicion && sincronizarTarifa && tarifasActivas.length > 0) {
-            await Promise.all(
-              tarifasActivas.map((tarifa) =>
-                actualizarPrecioDivisa.mutateAsync({
-                  tipo: 'tarifa',
+          if (esEdicion && tarifasActivas.length > 0) {
+            const actualizaciones = tarifasActivas
+              .map((tarifa) => {
+                const nuevoPrecio = String(formData.get(`tarifa_precio_${tarifa.id}`) ?? tarifa.price_ars).trim()
+                const nuevaDivisa = (String(formData.get(`tarifa_divisa_${tarifa.id}`) ?? tarifa.currency) ||
+                  tarifa.currency) as DivisaAdmin
+                const nuevosAsientos = Number(formData.get(`tarifa_asientos_${tarifa.id}`) ?? tarifa.available_seats)
+                const cambio =
+                  nuevoPrecio !== tarifa.price_ars ||
+                  nuevaDivisa !== tarifa.currency ||
+                  nuevosAsientos !== tarifa.available_seats
+                if (!cambio) return null
+                return guardarTarifa.mutateAsync({
+                  id: tarifa.id,
                   flightId: vuelo.id,
-                  tarifaId: tarifa.id,
-                  precio: tarifasActivas.length === 1 ? valores.base_price_ars : tarifa.price_ars,
-                  currency: divisaElegida,
-                }),
-              ),
-            )
+                  cabin_class: tarifa.cabin_class,
+                  price_ars: nuevoPrecio,
+                  currency: nuevaDivisa,
+                  available_seats: nuevosAsientos,
+                  baggage_included: tarifa.baggage_included,
+                  is_refundable: tarifa.is_refundable,
+                })
+              })
+              .filter(Boolean)
+
+            if (actualizaciones.length > 0) {
+              try {
+                await Promise.all(actualizaciones)
+              } catch (err) {
+                setErrorTarifas(err instanceof Error ? err.message : 'No pudimos actualizar las tarifas.')
+                return
+              }
+            }
           }
           toast.success(esEdicion ? 'Vuelo actualizado con éxito' : 'Vuelo creado con éxito')
           cerrar()
@@ -178,7 +265,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           enviar(evento.currentTarget)
         }}
       >
-        <AlertaFormulario mensaje={errorDeFormulario(guardar.error) ?? errores.fares} />
+        <AlertaFormulario mensaje={errorTarifas ?? errorDeFormulario(guardar.error) ?? errores.fares} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <CampoTexto
@@ -197,37 +284,80 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-[1fr_7.5rem_1fr_7.5rem]">
-          <CampoTexto
-            etiqueta="Ciudad origen"
-            name="origin_city"
-            placeholder="Buenos Aires"
-            defaultValue={vuelo?.origin_city}
-            error={errores.origin_city}
-          />
-          <CampoTexto
-            etiqueta="Código"
-            name="origin_code"
-            placeholder="AEP"
-            maxLength={10}
-            defaultValue={vuelo?.origin_code}
-            error={errores.origin_code}
-          />
-          <CampoTexto
-            etiqueta="Ciudad destino"
-            name="destination_city"
-            placeholder="Bariloche"
-            defaultValue={vuelo?.destination_city}
-            error={errores.destination_city}
-          />
-          <CampoTexto
-            etiqueta="Código"
-            name="destination_code"
-            placeholder="BRC"
-            maxLength={10}
-            defaultValue={vuelo?.destination_code}
-            error={errores.destination_code}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="map-label text-ink-500">Filtro origen</span>
+              <div className="inline-flex rounded-md bg-ink-100 p-0.5 text-xs">
+                {(['todos', 'local', 'exterior'] as const).map((op) => (
+                  <button
+                    key={op}
+                    type="button"
+                    onClick={() => setAlcanceOrigen(op)}
+                    className={cn(
+                      'cursor-pointer rounded px-2 py-0.5 font-semibold capitalize transition-colors',
+                      alcanceOrigen === op ? 'bg-sheet text-ink-900 shadow-sheet' : 'text-ink-500 hover:text-ink-900',
+                    )}
+                  >
+                    {op}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <CampoSeleccion
+              etiqueta="Origen"
+              name="origin_code"
+              defaultValue={vuelo?.origin_code ?? ''}
+              error={errores.origin_code ?? errores.origin_city}
+            >
+              <option value="" disabled>
+                Seleccioná origen
+              </option>
+              <OpcionesDestinos
+                destinos={destinos}
+                alcance={alcanceOrigen}
+                codigoActual={vuelo?.origin_code}
+                ciudadActual={vuelo?.origin_city}
+              />
+            </CampoSeleccion>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="map-label text-ink-500">Filtro destino</span>
+              <div className="inline-flex rounded-md bg-ink-100 p-0.5 text-xs">
+                {(['todos', 'local', 'exterior'] as const).map((op) => (
+                  <button
+                    key={op}
+                    type="button"
+                    onClick={() => setAlcanceDestino(op)}
+                    className={cn(
+                      'cursor-pointer rounded px-2 py-0.5 font-semibold capitalize transition-colors',
+                      alcanceDestino === op ? 'bg-sheet text-ink-900 shadow-sheet' : 'text-ink-500 hover:text-ink-900',
+                    )}
+                  >
+                    {op}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <CampoSeleccion
+              etiqueta="Destino"
+              name="destination_code"
+              defaultValue={vuelo?.destination_code ?? ''}
+              error={errores.destination_code ?? errores.destination_city}
+            >
+              <option value="" disabled>
+                Seleccioná destino
+              </option>
+              <OpcionesDestinos
+                destinos={destinos}
+                alcance={alcanceDestino}
+                codigoActual={vuelo?.destination_code}
+                ciudadActual={vuelo?.destination_city}
+              />
+            </CampoSeleccion>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -283,28 +413,47 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
         </div>
 
         {esEdicion && tarifasActivas.length > 0 && (
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-ink-200 bg-paper px-3.5 py-2.5 text-xs text-ink-700">
-            <input
-              type="checkbox"
-              name="sincronizar_tarifa"
-              defaultChecked={tarifasActivas.length === 1}
-              className="mt-0.5 size-4 shrink-0 rounded border-ink-300"
-            />
-            <span>
-              {tarifasActivas.length === 1 ? (
-                <>
-                  Actualizar también la tarifa publicada (
-                  <strong className="text-ink-900">{ETIQUETAS_CLASE_CABINA[tarifasActivas[0].cabin_class]}</strong>) con
-                  este precio y divisa.
-                </>
-              ) : (
-                <>
-                  Aplicar también esta divisa a todas las tarifas activas del vuelo (los montos individuales se editan
-                  en <strong className="text-ink-900">Tarifas</strong>).
-                </>
-              )}
-            </span>
-          </label>
+          <div className="rounded-xl border border-ink-200 bg-paper/70 p-4">
+            <p className="text-sm font-bold text-ink-900">Tarifas publicadas en la web (por clase)</p>
+            <p className="mt-0.5 text-xs text-ink-500">
+              El buscador público muestra el precio y la divisa de estas tarifas. Podés modificarlas acá mismo:
+            </p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {tarifasActivas.map((tarifa) => (
+                <div
+                  key={tarifa.id}
+                  className="grid items-end gap-3 rounded-lg border border-ink-200 bg-sheet p-3 sm:grid-cols-[1fr_9rem_9.5rem_6.5rem]"
+                >
+                  <div>
+                    <p className="map-label text-ink-500">Clase</p>
+                    <p className="mt-1 text-sm font-bold text-ink-900">{ETIQUETAS_CLASE_CABINA[tarifa.cabin_class]}</p>
+                  </div>
+                  <CampoTexto
+                    etiqueta="Precio"
+                    name={`tarifa_precio_${tarifa.id}`}
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    defaultValue={tarifa.price_ars}
+                  />
+                  <CampoSeleccion etiqueta="Divisa" name={`tarifa_divisa_${tarifa.id}`} defaultValue={tarifa.currency}>
+                    {entradasDe(ETIQUETAS_DIVISA_ADMIN).map(([valor, etiqueta]) => (
+                      <option key={valor} value={valor}>
+                        {etiqueta}
+                      </option>
+                    ))}
+                  </CampoSeleccion>
+                  <CampoTexto
+                    etiqueta="Asientos"
+                    name={`tarifa_asientos_${tarifa.id}`}
+                    type="number"
+                    min={0}
+                    defaultValue={tarifa.available_seats}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -437,7 +586,7 @@ export function ModalFormularioVuelo({ abierto, vuelo, alCerrar }: PropsModalFor
           <Boton variante="secondary" onClick={cerrar}>
             Cancelar
           </Boton>
-          <Boton type="submit" cargando={guardar.isPending || actualizarPrecioDivisa.isPending}>
+          <Boton type="submit" cargando={guardar.isPending || guardarTarifa.isPending}>
             {esEdicion ? 'Guardar cambios' : 'Crear vuelo'}
           </Boton>
         </div>

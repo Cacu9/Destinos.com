@@ -1,4 +1,4 @@
-import { ArrowRight, Plane } from 'lucide-react'
+import { ArrowRight, Building2, Plane } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { estilosBoton } from '@/components/ui/estilosBoton'
@@ -18,7 +18,10 @@ export function PaginaInicio() {
             <Link to="/vuelos" className={estilosBoton('primary', 'lg')}>
               <Plane className="size-4" /> Buscar vuelos
             </Link>
-            <Link to="/registro" className={estilosBoton('secondary', 'lg')}>
+            <Link to="/alojamientos" className={estilosBoton('secondary', 'lg')}>
+              <Building2 className="size-4" /> Ver alojamientos
+            </Link>
+            <Link to="/registro" className={estilosBoton('ghost', 'lg')}>
               Crear cuenta <ArrowRight className="size-4" />
             </Link>
           </div>
